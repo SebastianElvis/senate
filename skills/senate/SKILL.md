@@ -79,7 +79,11 @@ For each turn the format specifies:
 
 ### 5. Enforce output contracts
 
-When the format requires structured output (e.g., parliament votes as `{"vote": "yes|no|abstain", "reason": "..."}`), validate it. Prefer a fenced `json` block in the agent's reply; extract and parse. If parsing fails, re-prompt that agent **once** with the contract restated; if it fails again, record the failure and let the format's fallback rule decide (often: treat as abstention).
+Every phase with structured output declares a contract (see `CONTRACTS.md`). Validate each reply; on first failure, re-prompt with the contract restated; on second failure, record `"error": "contract_violation"` and apply the format's fallback rule.
+
+Detect and record other failure classes (`auth`, `rate_limit`, `timeout`, `refusal`, `unknown`) per `FAILURES.md`. Never silently drop a participant.
+
+Respect the budget caps in `BUDGET.md`: check `wall_clock_remaining` and `tokens_remaining` before each turn; if either is below its safety margin, skip to synthesis with what exists.
 
 ### 6. Synthesize the verdict
 
@@ -113,5 +117,15 @@ Do **not** dump the full transcript into the chat — it's on disk, linkable.
 
 - `SKILL.md` — this file.
 - `WORKSPACE.md` — spec for `.senate/runs/<id>/` layout.
+- `CONTRACTS.md` — structured-output contract discipline.
+- `FAILURES.md` — the five error classes and how to detect/retry each.
+- `BUDGET.md` — wall-clock, token, and per-turn caps.
+- `REPLAY.md` — deterministic replay of past runs.
+
+## Related skills
+
 - `../invoke-agent/*.md` — per-CLI invocation playbooks.
-- `../debate-format/*.md` — per-format playbooks.
+- `../debate-format/*.md` — per-format playbooks (and `../invoke-format/` for composition).
+- `../format-selector/` — when format is unspecified, ask this skill.
+- `../workflow/` — multi-stage pipelines that chain formats.
+- `../senate-eval/` — contract-compliance fixtures and scoring.
