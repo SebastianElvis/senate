@@ -1,6 +1,6 @@
 ---
 name: invoke-agent
-description: Playbook for invoking non-interactive coding-agent CLIs (codex, gemini, cursor, kimi, claude) as subprocesses. Use when the senate skill needs to run one turn of a debate, or when any skill needs to shell out to another AI CLI with a prompt and capture the reply.
+description: Playbook for invoking non-interactive coding-agent CLIs (codex, gemini, cursor, kimi, claude) as subprocesses. Use when moderate-debate needs to run one turn of a debate, or when any skill needs to shell out to another AI CLI with a prompt and capture the reply.
 ---
 
 # invoke-agent — CLI invocation playbook
@@ -11,11 +11,11 @@ This skill is a **reference library**, not a flow. When you need to call another
 
 | CLI | File | Typical use |
 | --- | --- | --- |
-| codex | `codex.md` | OpenAI Codex CLI |
-| gemini | `gemini.md` | Google Gemini CLI |
-| cursor | `cursor.md` | Cursor Agent CLI (`cursor-agent`) |
-| kimi | `kimi.md` | Moonshot Kimi CLI |
-| claude | `claude.md` | Anthropic Claude Code CLI |
+| codex | `references/codex.md` | OpenAI Codex CLI |
+| gemini | `references/gemini.md` | Google Gemini CLI |
+| cursor | `references/cursor.md` | Cursor Agent CLI (`cursor-agent`) |
+| kimi | `references/kimi.md` | Moonshot Kimi CLI |
+| claude | `references/claude.md` | Anthropic Claude Code CLI |
 
 ## Common invocation shape
 
@@ -49,8 +49,8 @@ Copy one of the existing files as a template, fill in the six sections above, an
 
 ## Files in this skill
 
-- `codex.md`
-- `gemini.md`
-- `cursor.md`
-- `kimi.md`
-- `claude.md`
+- `references/codex.md`
+- `references/gemini.md`
+- `references/cursor.md`
+- `references/kimi.md`
+- `references/claude.md`

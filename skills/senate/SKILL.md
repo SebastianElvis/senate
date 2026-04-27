@@ -1,131 +1,121 @@
 ---
 name: senate
-description: Orchestrate a multi-agent debate between coding CLIs (codex, gemini, cursor, kimi, claude) using a structured format (parliament, court, consensus). Use when the user wants a second opinion, adversarial review, cross-model consensus, or says "debate", "parliament", "court", "consensus", "senate", "have X and Y argue", "ask multiple models".
+description: Top-level orchestrator for multi-agent debates between coding CLIs (codex, gemini, cursor, kimi, claude). Routes a request through three sub-skills — debate-agenda (plan), moderate-debate (run), meeting-note (consolidate) — and returns a verdict and meeting notes. Use when the user wants a debate, second opinion, adversarial review, cross-model consensus, or says "debate", "parliament", "court", "consensus", "senate", "have X and Y argue", "ask multiple models".
 ---
 
-# senate — multi-agent debate orchestrator
+# senate — top-level debate orchestrator
 
-You are the **orchestrator** of a debate between several coding-agent CLIs. You do not argue yourself — you run the process: pick the format, invoke each agent per turn, keep the transcript, and synthesize the verdict.
+You are the **orchestrator**, not the planner, not the moderator, not the scribe. Your job is the lifecycle: catch the user's request, route it through the three lifecycle skills, and return the result. Each phase has a dedicated sub-skill that knows how to do that phase well.
+
+Glossary (used throughout this skill bundle, single canonical meaning):
+
+- **Orchestrator** — the `senate` skill (this file): top-level lifecycle conductor.
+- **Planner** — the `debate-agenda` skill: produces `agenda.md`.
+- **Moderator** — the `moderate-debate` skill: runs turns from the agenda.
+- **Scribe** — the `meeting-note` skill: writes `verdict.md` + `meeting-notes.md`.
+- **Synthesizer** — the in-format role (speaker / judge / editor / arbiter / synthesizer) that produces a single stage's synthesis content. Distinct from the scribe.
+- **Format** — the umbrella term for any debate playbook in `../debate-agenda/formats/`.
+- **Primitive** — a single-stage format (parliament, court, …).
+- **Pipeline** — a multi-stage format (rfc-pipeline, design-review, …) declared with `mode: pipeline`.
+- **Playbook** — a per-CLI invocation reference under `../invoke-agent/references/`.
+- **Run** — one execution; lives at `<cwd>/.senate/runs/<id>/`.
+
+```
+senate
+  → debate-agenda     (optional)   — plan: pick format, pick roster, sequence stages, ask if needed
+  → moderate-debate                 — run: drive turns, enforce contracts, manage context, handle failures
+  → meeting-note                    — consolidate: write verdict.md and meeting-notes.md
+```
 
 ## When to trigger
 
 Activate when the user asks for any of:
 
-- A debate, parliament, court, consensus, or senate between multiple agents/models.
-- A "second opinion" or "third opinion" from another CLI (codex, gemini, cursor, kimi, claude).
+- A debate, parliament, court, consensus, peer-review, brainstorm, RFC, etc., between multiple agents/models.
+- A "second opinion" or "third opinion" from another CLI.
 - Adversarial review where one model attacks and another defends.
 - Cross-model agreement on a decision, design, or plan.
+- A multi-stage decision pipeline (draft → review → finalize).
 
 If the user just wants one model's answer, **do not use this skill** — call the CLI directly.
 
-## Inputs to extract from the user request
+## Inputs
 
-1. **Task** — the question or artifact to debate (bug, design doc, PR diff, decision).
-2. **Format** — parliament, court, consensus, or other. If unspecified, ask, or default to `parliament` for open questions and `court` for decisions with a clear for/against.
-3. **Roster** — which CLIs participate. If unspecified, ask. A reasonable default is `codex, gemini, claude`.
-4. **Rounds / budget** — how many turns per agent (default: what the format file says).
-
-If any of (1)–(3) is missing or ambiguous, ask one clarifying question before starting. Do not guess the task.
+1. **Task** — the question or artifact to debate.
+2. **Format** (optional) — parliament, court, consensus, etc. If unspecified, the planner will choose.
+3. **Roster** (optional) — which CLIs participate. Default: `codex, gemini, claude`.
+4. **Multi-stage hint** (optional) — pipeline language ("draft, then review") triggers multi-stage planning.
+5. **`prepare_agenda`** (option) — `auto` (default) | `true` | `false`.
+   - `auto`: planner runs if the request is ambiguous, format is unspecified, multi-stage is implied, or composition is gestured at; otherwise skipped.
+   - `true`: planner always runs.
+   - `false`: skip planner; senate writes a minimal `agenda.md` directly from the user's request and proceeds. Only use when the user has provided format + roster + rounds explicitly.
 
 ## Steps
 
 ### 1. Mint the run directory
 
-Create `.senate/runs/<YYYY-MM-DD-HHMM>-<format>/` in the **current working directory** (never in the skill dir). See `WORKSPACE.md` for the full layout.
+Create `<cwd>/.senate/runs/<YYYY-MM-DD-HHMM>-<format-or-pipeline-name>/` (never in the skill dir). See `references/workspace.md` for the full layout.
 
-```bash
-RUN_DIR=".senate/runs/$(date +%Y-%m-%d-%H%M)-<format>"
-mkdir -p "$RUN_DIR/agents"
-```
+### 2. Decide on the agenda
 
-Write `roster.json` recording which CLI fills which role, the task, and the format.
+Based on `prepare_agenda`:
 
-### 2. Load the format
+- **`auto` and request is well-specified** (format named, roster named, single-stage, no composition) — or **`false`**: write a minimal `agenda.md` directly from the user's request. The minimal agenda fills the same `references/agenda-schema.md` shape the planner would: one stage, format from the user, roster from the user (or default `codex, gemini, claude`), default budget from `../moderate-debate/references/budget.md`, `checkpoint: none`, `status: ready`. Validate per the schema; if validation fails, fall back to invoking `../debate-agenda/`.
+- **`auto` and request is ambiguous** OR **`true`**: invoke `../debate-agenda/`. The planner produces `agenda.md`. If the planner returns `status: pending_clarification`, surface its question to the user, get the answer, and ask the planner to revise.
 
-Read the relevant file from the `debate-format` skill:
+Either way, the agenda lives at `<run-dir>/agenda.md` with `status: ready` before step 3 begins. Senate does not touch `agenda.md` after step 3 — only the planner (via re-plan) writes to it.
 
-- `debate-format/parliament.md`
-- `debate-format/court.md`
-- `debate-format/consensus.md`
+### 3. Moderate the debate
 
-The file tells you: roles, turn order, parallel vs sequential phases, termination condition, and the output contract for each turn.
+Invoke `../moderate-debate/`. It reads `agenda.md` and runs the debate to completion (or pauses at a checkpoint). On a checkpoint pause, surface the checkpoint state to the user; on continue/revise/abort/re-plan, route accordingly.
 
-### 3. Load per-CLI invocation playbooks
+### 4. Consolidate the result
 
-For each CLI in the roster, read the relevant file from the `invoke-agent` skill:
+When the moderator returns `status: completed` (or `stalled` / `aborted` with whatever was produced), invoke `../meeting-note/`. It writes `verdict.md` and `meeting-notes.md`.
 
-- `invoke-agent/codex.md`
-- `invoke-agent/gemini.md`
-- `invoke-agent/cursor.md`
-- `invoke-agent/kimi.md`
-- `invoke-agent/claude.md`
-
-These tell you the exact command template, stdin/flag conventions, output parsing, and known quirks for each CLI.
-
-### 4. Run turns
-
-For each turn the format specifies:
-
-1. Build the prompt. Every prompt has three parts:
-   - **Role brief** (from the format file) — who this agent is in this debate (e.g., "prosecution", "MP for party X", "synthesizer").
-   - **Transcript slice** — the prior turns this role is allowed to see (some formats redact; e.g., a jury doesn't see the judge's sidebar).
-   - **Turn instruction** — what to produce this turn, including any structured-output contract.
-2. Invoke the CLI using its playbook. Redirect stdout to `.senate/runs/<id>/agents/<cli>.<turn>.log`.
-3. Append a JSONL record to `.senate/runs/<id>/transcript.jsonl`:
-   ```json
-   {"turn": 3, "role": "prosecution", "cli": "codex", "ts": "2026-04-20T14:32:11Z", "text": "...", "tokens": 812}
-   ```
-4. If the format declares this phase as parallel, launch the per-agent subprocesses concurrently and wait for all before appending (order by role for determinism).
-
-### 5. Enforce output contracts
-
-Every phase with structured output declares a contract (see `CONTRACTS.md`). Validate each reply; on first failure, re-prompt with the contract restated; on second failure, record `"error": "contract_violation"` and apply the format's fallback rule.
-
-Detect and record other failure classes (`auth`, `rate_limit`, `timeout`, `refusal`, `unknown`) per `FAILURES.md`. Never silently drop a participant.
-
-Respect the budget caps in `BUDGET.md`: check `wall_clock_remaining` and `tokens_remaining` before each turn; if either is below its safety margin, skip to synthesis with what exists.
-
-### 6. Synthesize the verdict
-
-When the format's termination condition fires, run the synthesis turn as specified (usually one designated "judge" or "speaker" role). Write the final verdict to `.senate/runs/<id>/verdict.md` with:
-
-- The question.
-- The roster and format.
-- The verdict itself.
-- A short rationale citing turn numbers from the transcript.
-- Any dissenting minority opinion.
-
-### 7. Report back
+### 5. Report back
 
 Return to the user:
 
-- A two-to-four-sentence summary of the verdict.
-- The path to `verdict.md` and the run dir.
-- Anything unexpected (an agent that kept failing, a split vote, etc.).
+- A 2–4 sentence summary of what was decided.
+- Path to `meeting-notes.md` and `verdict.md`.
+- Any anomaly worth surfacing (split vote, repeated failures, stalled stage).
 
 Do **not** dump the full transcript into the chat — it's on disk, linkable.
 
+## Resume
+
+If the user asks to resume a paused or stalled run, jump straight to step 3 (`moderate-debate`) on the existing run dir. The moderator handles re-extraction of bindings and the resume flow per `../moderate-debate/references/checkpoints.md`.
+
+## Replay
+
+If the user asks to replay a past run with a different roster, see `references/replay.md`. Replay produces a sibling run dir with its own agenda (copied + roster-adjusted) and runs the full lifecycle on it.
+
+## Long-running runs
+
+A multi-stage agenda may pause for hours or days at a checkpoint. See `references/timeline.md` for time-spanning conventions and resumability across sessions.
+
 ## Guardrails
 
-- **Workspace state only in `.senate/`**, never in the skill directory. The skill is read-only at runtime.
-- **Budget.** Default to 1 opening + 2 rebuttal rounds + 1 synthesis per agent. Respect any `--max-rounds` or `--budget` the user gives.
-- **Parallelism.** Use parallel subprocesses only when the format phase is declared parallel. Sequential phases (e.g., court) must wait for each turn.
-- **Failures.** If a CLI fails a turn twice (non-zero exit or contract violation), record the failure in `transcript.jsonl` and continue. Never silently drop a participant.
+- **Workspace state only in `<cwd>/.senate/`**, never in the skill directory. The skill is read-only at runtime.
+- **Don't synthesize yourself.** Synthesis is `meeting-note`'s job. You return the path; the user reads the file.
+- **Don't moderate yourself.** Turn-by-turn invocation is `moderate-debate`'s job.
+- **Don't pick a format yourself** unless the request is unambiguous. Defer to `debate-agenda`.
 - **No secrets in prompts.** Strip env vars, tokens, and credentials from anything sent to another CLI.
 
 ## Files in this skill
 
 - `SKILL.md` — this file.
-- `WORKSPACE.md` — spec for `.senate/runs/<id>/` layout.
-- `CONTRACTS.md` — structured-output contract discipline.
-- `FAILURES.md` — the five error classes and how to detect/retry each.
-- `BUDGET.md` — wall-clock, token, and per-turn caps.
-- `REPLAY.md` — deterministic replay of past runs.
+- `references/workspace.md` — spec for `.senate/runs/<id>/` layout.
+- `references/replay.md` — deterministic replay of past runs.
+- `references/timeline.md` — time-spanning runs and resumability across sessions.
 
-## Related skills
+## Sub-skills (lifecycle phases)
 
-- `../invoke-agent/*.md` — per-CLI invocation playbooks.
-- `../debate-format/*.md` — per-format playbooks (and `../invoke-format/` for composition).
-- `../format-selector/` — when format is unspecified, ask this skill.
-- `../workflow/` — multi-stage pipelines that chain formats.
-- `../senate-eval/` — contract-compliance fixtures and scoring.
+- `../debate-agenda/` — plan: format selection, roster, stage sequencing, composition, branching. Also hosts the format library at `../debate-agenda/formats/`.
+- `../moderate-debate/` — run: turns, contracts, failures, budget, checkpoints, shared and private context.
+- `../meeting-note/` — consolidate: verdict.md and meeting-notes.md.
+
+## Primitives
+
+- `../invoke-agent/` — per-CLI invocation playbooks (used by `moderate-debate`, referenced by `debate-agenda` for validation).
