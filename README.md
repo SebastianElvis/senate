@@ -1,70 +1,137 @@
 # senate
 
-Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, consensus) to reach more robust answers than any single model.
+Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, consensus, …) to reach more robust answers than any single model.
 
 ## Install
 
+The canonical entry point is the [skills CLI](https://github.com/vercel-labs/skills):
+
 ```bash
-npx skills add elvisage941102/senate
+npx skills add SebastianElvis/senate
 ```
 
-Or from a local clone:
+### Source formats
 
 ```bash
+# GitHub shorthand (owner/repo)
+npx skills add SebastianElvis/senate
+
+# Full GitHub URL
+npx skills add https://github.com/SebastianElvis/senate
+
+# Direct path to a single skill in the repo
+npx skills add https://github.com/SebastianElvis/senate/tree/main/skills/senate
+
+# Any git URL
+npx skills add git@github.com:SebastianElvis/senate.git
+
+# Local path (after cloning)
 npx skills add ./senate
 ```
 
-This installs seven skills into your agent's skill directory (`.claude/skills/`, `.agents/skills/`, etc.):
+### Useful flags
+
+| Option | Description |
+| --- | --- |
+| `-g, --global` | Install to user directory (`~/<agent>/skills/`) instead of the current project |
+| `-a, --agent <agents...>` | Target specific agents (e.g., `claude-code`, `codex`, `cursor`, `opencode`) |
+| `-s, --skill <skills...>` | Install a subset by name (e.g., `--skill senate --skill debate-agenda`) |
+| `-l, --list` | List the skills in this repo without installing |
+| `--copy` | Copy files instead of symlinking |
+| `-y, --yes` | Skip confirmation prompts |
+| `--all` | Install all skills to all detected agents |
+
+### Examples
+
+```bash
+# Just see what's in the repo before installing
+npx skills add SebastianElvis/senate --list
+
+# Install only the top-level orchestrator (the others are picked up automatically when senate routes to them)
+npx skills add SebastianElvis/senate --skill senate
+
+# Install all senate skills to Claude Code, globally
+npx skills add SebastianElvis/senate --all -g -a claude-code -y
+
+# Install to multiple agents
+npx skills add SebastianElvis/senate -a claude-code -a opencode -a cursor
+```
+
+### Other commands
+
+```bash
+npx skills list                  # list installed skills
+npx skills find debate           # search across published skills
+npx skills update senate         # pull the latest version
+npx skills remove senate         # uninstall
+```
+
+## What's in this bundle
+
+Five skills, organized around a clean lifecycle:
+
+```
+senate
+  → debate-agenda    (optional)   — plan: pick format, pick roster, sequence stages, ask if needed
+  → moderate-debate                — run: drive turns, enforce contracts, manage context, handle failures
+  → meeting-note                   — consolidate: write verdict.md and meeting-notes.md
+```
 
 | Skill | Purpose |
 | --- | --- |
-| `senate` | Entry point. Picks format, manages the run, drives turns, writes the verdict. |
-| `invoke-agent` | Reference playbook for invoking each supported CLI. |
-| `debate-format` | 11 debate formats: parliament, court, consensus, committee, peer-review, brainstorm, oracle, socratic, appeals-court, rfc, red-team. |
-| `invoke-format` | Composition primitive: run one format as a sub-debate inside another's role. |
-| `format-selector` | Recommends a format given a task description. |
-| `workflow` | Multi-stage pipelines that chain formats (RFC → review → vote). Ships 4 canonical pipelines. |
-| `senate-eval` | Evaluation harness — measures per-CLI contract compliance across fixture debates. |
+| `senate` | Top-level entry. Mints the run dir and routes through the three lifecycle skills. |
+| `debate-agenda` | Plans the debate. Picks the format, picks the roster, sequences multi-stage pipelines, resolves composed (sub-debate) roles, asks for clarification when the request is ambiguous. Hosts the format library at `formats/` (single-stage primitives + multi-stage pipelines side by side). |
+| `moderate-debate` | Runs the debate from the agenda. Drives turns, enforces output contracts, manages shared and private context, handles failures, manages checkpoints, calls back to `debate-agenda` for mid-run re-plans. |
+| `meeting-note` | Consolidates the run. Reads agenda + transcript + context + per-stage verdicts; writes `verdict.md` and `meeting-notes.md`. |
+| `invoke-agent` | Per-CLI invocation playbook (codex, gemini, cursor, kimi, claude). Used by `moderate-debate`. |
+
+Each skill follows the [Agent Skills spec](https://agentskills.io/specification): a `SKILL.md` at the root and on-demand documentation under `references/`. The `senate-eval` evaluation harness lives at the workspace root (not under `skills/`) and will be revisited later.
 
 ## Usage
 
-In your coding agent, ask something like:
+In your coding agent, ask for a debate in plain language:
 
 - *"Run a **parliament** between codex, gemini, and kimi on whether to migrate this service to Rust."*
 - *"Hold a **court** debate — codex prosecutes my refactor, claude defends, gemini judges."*
 - *"Drive **consensus** between three models on this API design."*
 - *"**Red-team** this deployment plan — find failure modes."*
 - *"**Peer-review** this design doc."*
-- *"Run the **rfc-pipeline** workflow on this spec."*
-- *"Which format should I use for this?"* (invokes `format-selector`)
-- *"Run **senate-eval** on all fixtures and report contract compliance per CLI."*
+- *"Run an RFC pipeline on this spec."* (multi-stage agenda — debate-agenda picks the `rfc-pipeline` template)
+- *"Which format should I use for this?"* (debate-agenda answers without running the debate)
 
-The `senate` skill triggers for single debates; the `workflow` skill for multi-stage pipelines. All run artifacts land in `.senate/` (runs) or `.senate/workflows/` (pipelines) in your current workspace — never in this skill repo.
+Run artifacts land in `<cwd>/.senate/runs/<id>/` — never in this skill repo.
 
-## Adding a format, CLI, or workflow
+## Run-dir layout
 
-- **New CLI**: drop `skills/invoke-agent/<name>.md` following one of the existing CLI files as a template.
-- **New format**: drop `skills/debate-format/<name>.md` following `skills/debate-format/_template.md`, add a row to `debate-format/SKILL.md`.
-- **New workflow**: drop a markdown file under `.senate/workflows/` in your workspace (user-local) or under `skills/workflow/canonical/` (to contribute upstream).
-- **New eval fixture**: drop `skills/senate-eval/fixtures/<name>.md` following one of the shipped fixtures.
+Single-stage runs and multi-stage pipelines share the same workspace conventions; multi-stage runs add a `stages/` subdirectory. Full layout in [`skills/senate/references/workspace.md`](skills/senate/references/workspace.md).
 
-No code to write. No package to publish. Markdown all the way down.
+```
+.senate/runs/<id>/
+  agenda.md          # the plan, with revisions log
+  context.md         # shared scratchpad — every agent reads each turn
+  agents/<cli>.md    # per-CLI private memory across turns
+  transcript.jsonl   # append-only structured per-turn record
+  verdict.md         # canonical decision (meeting-note writes this)
+  meeting-notes.md   # user-facing summary (meeting-note writes this)
+  state.json         # run status, used for resume
+```
+
+## Adding a format or CLI
+
+- **New CLI**: drop `skills/invoke-agent/references/<name>.md` following one of the existing CLI files as a template.
+- **New single-stage format**: drop `skills/debate-agenda/formats/<name>.md` following `skills/debate-agenda/formats/_template.md`, add a row to `skills/debate-agenda/formats/README.md` (primitives table).
+- **New multi-stage pipeline**: drop `skills/debate-agenda/formats/<name>.md` following one of the four shipped pipelines (rfc-pipeline, design-review, bill-to-law, incident-post-mortem), add a row to `skills/debate-agenda/formats/README.md` (pipelines table).
+
+No code to write. Markdown all the way down.
 
 ## Roadmap
 
-See [`dev/PRODUCT.md`](dev/PRODUCT.md) for the full vision and horizon plan. Summary of what's implemented:
-
-- **H0 Foundation** — `senate`, `invoke-agent`, `debate-format` with parliament / court / consensus.
-- **H1 Reliability** — contract discipline (`CONTRACTS.md`), failure taxonomy (`FAILURES.md`), budget guardrails (`BUDGET.md`), replay (`REPLAY.md`), and the `senate-eval` harness with 3 fixtures.
-- **H2 Expanded society** — 8 new formats (committee, peer-review, brainstorm, oracle, socratic, appeals-court, rfc, red-team), the `invoke-format` composition primitive, and the `format-selector` recommender.
-- **H3 Workflows** — the `workflow` skill with checkpoints, branching, and timeline-spanning, plus 4 canonical pipelines (rfc-pipeline, design-review, bill-to-law, incident-post-mortem).
-
-H4–H7 (nested hierarchies, persistent actors, incentives, standing orgs) are described in `dev/PRODUCT.md` and not yet implemented.
+See [`dev/PRODUCT.md`](dev/PRODUCT.md) for the full vision and horizon plan.
 
 ## Requirements
 
-- A host agent that supports the [Agent Skills spec](https://agentskills.io) (Claude Code, Codex, Cursor, OpenCode, etc.).
-- The CLIs you want to include in debates installed and authenticated on your system. Each `skills/invoke-agent/<cli>.md` file has an install check you can copy-paste.
+- A host agent that supports the [Agent Skills spec](https://agentskills.io). The skills CLI auto-detects 43+ agents (Claude Code, Codex, Cursor, OpenCode, Gemini CLI, Continue, …) and installs into the right directory for each.
+- The CLIs you want to include in debates installed and authenticated on your system. Each `skills/invoke-agent/references/<cli>.md` file has an install check you can copy-paste.
 
 ## License
 
