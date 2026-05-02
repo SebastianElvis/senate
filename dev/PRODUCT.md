@@ -56,62 +56,75 @@ The minimum believable thing. Three formats, five CLIs, workspace conventions.
 
 ---
 
-### Horizon 1 — Reliability
+### Horizon 1 — Reliability *(shipped)*
 
-Make H0 boring. Today's H0 ships correct-looking prompts; H1 ships prompts that **actually produce structured output 99% of the time** across all five CLIs, with deterministic replay and a real eval harness.
+Make H0 boring. Today's H0 ships correct-looking prompts; H1 ships prompts that **produce structured output reliably** across all five CLIs, with deterministic replay, a real eval harness, and worked examples for the common cases.
 
-**Ships:**
+**Shipped:**
 
-- **Contract hardening.** Every phase that emits structured output gets a contract file (`contracts/parliament-vote.json`) — JSON schema + example + re-prompt template. Orchestrator validates and retries mechanically.
-- **Eval harness** (a separate skill, `evals`). A set of fixture debates with expected shape of outcome. Nightly runnable locally; reports format success rate per CLI.
-- **Replay.** `transcript.jsonl` is complete enough that `senate replay <run-id>` re-runs the same debate deterministically (same prompts, same CLIs, same order) to compare models.
-- **Budget guardrails.** Per-run token/wall-clock caps enforced in the orchestrator prompt.
-- **Failure taxonomy.** Standard vocabulary in `transcript.jsonl` for the five ways an agent turn fails: auth, rate-limit, timeout, contract-violation, refusal.
-- **Docs: playbooks for common debates.** "Review this PR as a court", "Design an API by consensus", "Weigh a migration in parliament".
+- **Contract hardening.** Per-phase output contracts documented in `skills/moderate-debate/references/contracts.md`; format files declare the contract for each turn.
+- **Eval harness** at `evals/` — separate from the shipped bundle. Two-tier grading: deterministic checks against the run-dir contract + LLM judges via `claude -p`. Fixtures cover the headline formats; runner is `evals/run.sh`. Available locally for anyone changing a skill; no CI compliance bar gates merges.
+- **Replay.** `skills/senate/references/replay.md` defines the replay contract; `transcript.jsonl` is the source of truth.
+- **Budget guardrails.** `skills/moderate-debate/references/budget.md` — per-run token/wall-clock caps enforced by the moderator.
+- **Failure taxonomy.** `skills/moderate-debate/references/failures.md` — vocabulary for auth / rate-limit / timeout / contract-violation / refusal turn failures, written into `transcript.jsonl` and surfaced via `failures.md`.
+- **Worked examples for common debates.** `examples/` ships three end-to-end recipes — *Review a PR as a court*, *Design an API by consensus*, *Weigh a migration in parliament* — covering when to pick each format, the prompt to give the orchestrator, the recommended roster, what shows up in the run dir, and how to read the verdict.
 
-**Definition of done:** running 20 debates in a row without a human having to intervene; eval shows ≥95% contract compliance per CLI on the three headline formats.
+**Definition of done:** the substrate (contracts, replay, budget, failure taxonomy, eval harness) is in place; `examples/` covers the three headline formats end-to-end. Compliance is measured locally via the harness when skills change, not enforced as a CI bar — the harness is a tool for the contributor, not a gate on merges.
 
 ---
 
-### Horizon 2 — Expanded society
+### Horizon 2 — Expanded society *(shipped)*
 
 Go from 3 formats to ~10, each drawn directly from a well-understood human institution. The product thesis — *that the space of human coordination patterns is the right design space* — starts being visible here. **This is the headline horizon**: format surface is what makes the library genuinely useful, and every later horizon assumes a rich format catalog underneath.
 
-**New formats:**
+**Shipped formats** (11 single-stage primitives in `skills/debate-agenda/formats/`):
 
 - **`committee`** — deliberate in private, produce a written recommendation. Small roster, long-form output, editor role writes the final doc.
-- **`peer-review`** — author, 2–3 reviewers, editor. Reviewers submit blind comments; author revises; editor adjudicates. Excellent for design docs.
-- **`brainstorm`** — diverge then converge. All agents generate freely in round 1 (no critique); round 2 is clustering and ranking; round 3 selects the top-k for deeper development.
-- **`oracle`** — expert panel. One questioner, N domain experts, synthesizer. Experts answer independently (no cross-talk) before synthesis. For *"what do we need to know before deciding X?"*.
-- **`socratic-interview`** — one interviewer, one subject. Interviewer probes by asking the narrowest possible follow-up. Useful for debugging an agent's reasoning on a specific claim.
-- **`appeals-court`** — re-runs a prior `court` verdict with a different roster, looking specifically for errors in the original ruling. Takes a previous `run_id` as input.
-- **`rfc`** — distributed written comment. An author posts a draft; everyone annotates independently and asynchronously; editor merges. Scales beyond debate size limits.
-- **`red-team`** — adversarial audit. One or more attackers try to find the failure case in a proposal; defender must address each.
+- **`peer-review`** — author, blind reviewers, editor. Reviewers submit independent comments; author revises; editor adjudicates. Excellent for design docs.
+- **`brainstorm`** — diverge then converge. Agents generate freely in round 1 (no critique); round 2 clusters and ranks; round 3 selects the top-k for deeper development.
+- **`oracle`** — expert panel. One questioner, N domain experts, synthesizer. Experts answer independently (no cross-talk) before synthesis.
+- **`socratic`** — one interviewer, one subject. Interviewer probes by asking the narrowest possible follow-up. Useful for stress-testing a single claim or reasoning chain.
+- **`appeals-court`** — re-runs a prior `court` verdict with a different roster, looking for errors in the original ruling. Takes a previous `run_id` as input.
+- **`rfc`** — distributed written comment. An author posts a draft; commenters annotate independently and asynchronously; editor merges. Scales beyond debate size limits.
+- **`red-team`** — adversarial audit. Attackers try to find failure cases in a proposal; defender must address each; judge rules.
 
-**Also:**
+(Plus the three H0 formats: `parliament`, `court`, `consensus`.)
 
-- **Format composition primitives.** `invoke-format` lets one format call another (e.g., a `committee` that resolves disagreement by spawning a mini-`court`).
-- **Format selector skill** — given a task, recommend the best-fit format with a one-paragraph rationale. Reduces the "which format should I use?" friction.
+**Also shipped:**
 
-**Definition of done:** ≥10 formats, each with a real-world debate example in the docs; at least two formats that compose (`committee` invoking `court` for internal tiebreaks).
+- **Format selector.** `skills/debate-agenda/references/format-selection.md` — decision tree the planner walks; the formats README has a quick "user says X → pick Y" table.
+- **Format composition.** Implemented as multi-stage pipelines (`mode: pipeline`) rather than a separate `invoke-format` primitive. Pipelines pass each stage's verdict as input to the next; see H3 for the four shipped pipelines and the `stages/<N>-<name>/` run-dir layout that makes composition observable.
+
+**Still open:**
+
+- **Real-world debate examples in the docs** for each format. The format files document shape and contracts; opinionated end-to-end walk-throughs are sparse.
+- **Mini-debate composition inside a single stage** (e.g., a committee role filled by a sub-court for tiebreaks). This is H4's territory; today, composition only happens at pipeline-stage granularity.
+
+**Definition of done:** ≥10 formats, each with a real-world debate example in the docs; at least two formats that compose. *Surface-level done; example docs and intra-stage composition are the gap.*
 
 ---
 
-### Horizon 3 — Workflows / longitudinal governance
+### Horizon 3 — Workflows / longitudinal governance *(substrate shipped)*
 
 Most real decisions are not one debate — they are a pipeline. A bill becomes law by: draft → committee review → floor debate → vote → signature. A paper becomes published by: draft → peer review → revision → editorial ruling. H3 makes multi-stage governance first-class, so `senate` can model the full life of a decision, not just a single deliberation.
 
 This is the horizon that turns a library of formats into a **governance substrate** — and it's prioritized alongside H2 because most valuable real-world decisions live in pipelines, not single debates.
 
-**Ships:**
+**Design deviation from the original plan:** rather than a separate top-level "workflow" skill, pipelines are unified with single-stage formats inside `debate-agenda`. A pipeline file declares `mode: pipeline` in its frontmatter and lists stages that point at primitive format files. The planner expands either kind into the same `agenda.md`; the moderator runs each stage with its primitive's contracts. This keeps "one debate" and "many debates chained" on the same substrate and avoids a parallel workflow skill that would duplicate the run-dir contract.
 
-- **Workflow skill.** A new top-level skill that takes a *pipeline* (ordered list of formats with handoff rules) and runs it end to end. State persists between stages; each stage's verdict becomes the next stage's input.
-- **Canonical workflows.** `rfc-pipeline`, `design-review`, `bill-to-law`, `incident-post-mortem`. Each ships as a workflow file referencing the relevant format files from H2.
-- **Human-in-the-loop checkpoints.** Workflows can pause for user approval between stages. Resume from checkpoint.
-- **Time-spanning runs.** A workflow can be paused and resumed days later. Run directory layout accommodates multi-day state.
-- **Branch and merge.** A workflow can fan out into parallel sub-pipelines (e.g., security review and perf review running in parallel) and merge their verdicts before proceeding.
+**Shipped:**
 
-**Definition of done:** a user can run a full RFC pipeline on a design doc — draft submitted, 3 reviewers in parallel, author revises, editor rules — as a single command, with all intermediate artifacts preserved and resumable.
+- **Pipelines as a first-class format kind.** `mode: pipeline` frontmatter; stages, bindings, and a `stages/<N>-<name>/` run-dir layout that captures intermediate verdicts.
+- **Canonical pipelines.** `rfc-pipeline` (committee → rfc → committee), `design-review` (oracle → committee → peer-review ‖ red-team → committee), `bill-to-law` (committee → rfc → parliament → committee), `incident-post-mortem` (oracle → red-team → committee). All four shipped under `skills/debate-agenda/formats/`.
+- **Human-in-the-loop checkpoints.** `skills/moderate-debate/references/checkpoints.md` — pipelines can pause between stages and resume from `state.json`.
+- **Branch and merge** (basic). `design-review` runs `peer-review ‖ red-team` in parallel and merges verdicts at the next committee stage. The bindings vocabulary supports this; richer fan-out/fan-in patterns are still ad-hoc per pipeline.
+
+**Still open:**
+
+- **Time-spanning runs in practice.** The run-dir contract accommodates multi-day state, but we have not exercised resume-after-days flows in the eval harness.
+- **End-to-end demonstration on a real design doc** as a documented example.
+
+**Definition of done:** a user can run a full RFC pipeline on a design doc — draft submitted, reviewers in parallel, author revises, editor rules — as a single command, with all intermediate artifacts preserved and resumable.
 
 ---
 
@@ -200,6 +213,8 @@ The final and most speculative horizon: **persistent, evolving agent organizatio
 
 Every horizon is a step *toward* the full claim: that agent collaboration should be designed the way humans designed their institutions — deliberately, with protocols chosen for the question, with records kept, with rules about how the rules change. The H0–H7 progression mirrors, loosely, the evolution of human coordination: from informal debate → stable formats → multi-stage governance → hierarchical deliberation → (eventually, when the substrate is rich enough) persistent identity, incentives, and standing institutions.
 
-The priority path is **H0 → H1 → H2 → H3**: a reliable foundation, a rich format catalog, and a pipeline substrate. H4 lands naturally once H3 is in place. H5 and H6 are parked until real usage volume makes reputation and incentives load-bearing rather than ornamental. H7 is the long view.
+The priority path is **H0 → H1 → H2 → H3**: a reliable foundation, a rich format catalog, and a pipeline substrate. As of this writing, H0 and H1 are done — H1 ships the contract / replay / budget / failure substrate, the local eval harness, and three worked examples covering the headline formats. H2 is shipped with 11 single-stage formats and a format selector. H3's substrate is shipped with four canonical pipelines and resumable checkpoints. The near-term focus is exercising H3 in real use (time-spanning runs, end-to-end pipeline demonstrations) and filling in per-format examples beyond the H1 three — rather than reaching for new horizons.
+
+H4 lands naturally once H3 is exercised in real use. H5 and H6 remain parked until run volume makes reputation and incentives load-bearing rather than ornamental. H7 is the long view.
 
 We are not inventing. We are porting.
