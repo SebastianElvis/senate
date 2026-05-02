@@ -48,7 +48,7 @@ The minimum believable thing. Three formats, five CLIs, workspace conventions.
 **Ships:**
 
 - `senate` orchestrator skill.
-- `invoke-agent` with codex / gemini / cursor / kimi / claude playbooks.
+- `invoke-agent` with codex / gemini / cursor / kimi / claude playbooks, loaded by per-turn subagents dispatched from the moderator.
 - `debate-format` with parliament / court / consensus / template.
 - Workspace spec (`.senate/runs/<id>/`).
 
@@ -204,7 +204,7 @@ The final and most speculative horizon: **persistent, evolving agent organizatio
 - **Verdict trust.** A verdict is a markdown document produced by a synthesizer agent. How do we surface when the synthesis *disagreed with the underlying vote*? Maybe synthesizers must also emit a structured `{decision, tally, override?: true, reason}` that orchestrators can flag.
 - **Cross-CLI context budget.** A long parliament may exceed a small CLI's context window. Do we auto-summarize, sample turns, or fail loudly? H1 will land on "fail loudly + provide a summarize-and-retry format".
 - **Privacy boundary for sub-debates.** What's the right default — opaque (jury-room model) or transparent (glass-box)? Probably opaque with a `--verbose` flag.
-- **Host heterogeneity.** Some host agents have parallel subagent tools; others only have shell. Format files mostly assume shell; we may eventually want conditional instructions.
+- **Host heterogeneity.** The moderator spec now requires per-turn subagent isolation. Hosts without an Agent/Task-style primitive need an equivalent isolation shim before they can run debates correctly.
 - **What happens when actors diverge from their CLI?** If Claude-as-pragmatist has a reputation built from Sonnet 4.5 and the user upgrades to Sonnet 4.7, is that still the same actor? Probably yes, with a version marker.
 
 ---

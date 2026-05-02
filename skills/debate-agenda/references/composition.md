@@ -67,7 +67,9 @@ When the parent stage reaches a turn for a composed role:
      "cli": "compose:consensus",
      "sub_run_id": "<parent-id>.sub.jury-verdict-1",
      "text": "{child verdict text}",
-     "completion_tokens": 18432
+     "completion_tokens": 18432,
+     "log_path": null,
+     "retry_log_path": null
    }
    ```
 

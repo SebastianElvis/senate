@@ -17,14 +17,19 @@ All runtime state for a debate lives in the **user's current working directory**
         meeting-notes.md     # user-facing summary (written by meeting-note)
         failures.md          # written only if any failures occurred
         agents/
-          codex.md           # codex's private memory across turns
-          codex.1.log        # raw stdout for codex, turn 1
+          codex.md           # codex's private memory across turns (moderator-owned writer)
+          codex.1.log        # raw stdout for codex, turn 1 (per-turn subagent-owned writer)
+          codex.1.stderr     # raw stderr, turn 1; absent when stderr was empty
           codex.2.log
           gemini.md
           gemini.1.log
           claude.md
           claude.1.log
 ```
+
+**Writer ownership for `agents/` files.** The `<cli>.md` private memory is written only by the moderator (it appends `private_delta` blocks returned by per-turn subagents, in turn order). The `<cli>.<turn>.log` and `<cli>.<turn>.stderr` files are written only by the per-turn subagent that ran that turn (see `../../moderate-debate/SKILL.md` §4a). The `.log` is always kept (so `log_path` on dispatched CLI transcript lines resolves); the `.stderr` is kept only when non-empty. Any retry the subagent performs — contract re-prompt, `rate_limit`/`timeout` retry, or exit-0 empty-stdout retry per `../../moderate-debate/references/failures.md` — produces sibling files tagged `<turn>r1` (e.g., `codex.7r1.log`); only one retry per turn is allowed under any policy, so `r2` never exists. The moderator never opens any of these files at runtime — they are for replay and debugging only — but it records `log_path` (and `retry_log_path` when present) on the corresponding `transcript.jsonl` line.
+
+Exception: if a per-turn subagent crashes or returns malformed data before creating its first-attempt `.log`, the moderator may create an empty synthetic `agents/<cli>.<turn>.log` solely to preserve the dispatched-turn `log_path` invariant. This is the only moderator write to a `<cli>.<turn>.log` file; the transcript line should also record `error: "unknown"` and a synthetic `stderr_tail` such as `subagent_crash`.
 
 ## Layout — multi-stage run (pipeline)
 
@@ -68,7 +73,7 @@ All runtime state for a debate lives in the **user's current working directory**
 
 ### `agenda.md`
 
-The plan. Schema in `../../debate-agenda/references/agenda-schema.md`. YAML frontmatter for machine-parseable fields, markdown body for the human-readable rationale. Mutable: the moderator may append to `## Revisions` if the agenda is re-planned mid-run.
+The plan. Schema in `../../debate-agenda/references/agenda-schema.md`. YAML frontmatter for machine-parseable fields, markdown body for the human-readable rationale. The **planner is the sole writer**; if the moderator needs to revise mid-run it calls back to `debate-agenda`, which appends a `## Revisions` entry and rewrites the file (see `../../moderate-debate/SKILL.md` § 5 "Plan-validate-execute gate").
 
 ### `context.md`
 
@@ -84,7 +89,13 @@ Append-only, one JSON object per line. Monotonic `turn` numbering. Schema below.
 
 ### `state.json`
 
-Source of truth for whether the run is running, paused, completed, etc. The moderator writes it at every stage boundary and every checkpoint. Used for resume.
+Source of truth for whether the run is running, paused, completed, etc. Used for resume. Write cadence (moderator-owned, atomic temp-file + rename every time):
+
+- Every **turn boundary**: bump `last_activity_at`. This is the heartbeat — a crashed or stalled run leaves no signal of progress otherwise.
+- Every **stage boundary** and every **checkpoint**: full re-write including `current_stage`, `stages_completed`, `stages_pending`, `stages[*]`, `checkpoint`, `budget_remaining`.
+- On `auth` error or any abort: write `status: "aborted"` with `aborted_reason` before handing back to `senate`.
+
+The per-turn subagent never writes `state.json`.
 
 ### `verdict.md` and `meeting-notes.md`
 
@@ -130,6 +141,8 @@ This is the **canonical** schema. Every other file that needs to record or inter
   "error": null,
   "retry_count": 0,
   "stderr_tail": null,
+  "log_path": "agents/codex.1.log",
+  "retry_log_path": null,
   "sub_run_id": null
 }
 ```
@@ -139,11 +152,13 @@ Field notes:
 - `stage` — `1` for single-stage runs; the stage index for multi-stage.
 - `prompt` — the full prompt body sent to the CLI. Required for replay. Long prompts may be stored gzipped+base64 as `prompt_gz` instead.
 - `tokens_estimated` — `true` when the CLI didn't report token counts and the moderator estimated from char count.
-- `structured` — present only when the format's output contract produced a parseable block. Omitted when `error` is set.
-- `context_delta_appended` / `private_delta_appended` — booleans recording whether the moderator extracted and appended those blocks; absence of a delta is not a failure.
-- `error` — one of the codes in `../../moderate-debate/references/failures.md` (`auth`, `rate_limit`, `timeout`, `contract_violation`, `refusal`, `unknown`, `budget_exhausted`), or `null` when the turn succeeded.
-- `retry_count` — number of retries before the line was committed. `0` on first-try success.
-- `stderr_tail` — last 200 bytes of stderr when `error` is set, otherwise `null`.
+- `structured` — present only when the format's output contract produced a parseable machine-readable block, usually fenced JSON. Omitted when `error` is set and omitted for free-text contracts that validate `text` without producing a separate parsed object. Sourced from the per-turn subagent's `parsed_output` field (see `../../moderate-debate/SKILL.md` §4a).
+- `context_delta_appended` / `private_delta_appended` — booleans recording whether the moderator appended the deltas the subagent returned; absence of a delta is not a failure.
+- `error` — one of the codes in `../../moderate-debate/references/failures.md` (`auth`, `rate_limit`, `timeout`, `contract_violation`, `refusal`, `unknown`, `budget_exhausted`), or `null` when the turn succeeded. Sourced from the subagent's `error.kind` (or imposed by the moderator for `budget_exhausted`).
+- `retry_count` — number of CLI re-invocations the subagent performed before this line was committed (rate-limit/timeout retry, exit-0 empty-stdout retry, or contract re-prompt). `0` on first-try success.
+- `stderr_tail` — last 200 bytes of stderr when `error` is set, otherwise `null`. Already truncated by the subagent.
+- `log_path` — relative path (from the run dir) to the first-attempt raw stdout log written by the per-turn subagent (e.g., `agents/codex.1.log`). Required for dispatched CLI turns, even on error; the file always exists (subagents do not prune the `.log` even when empty, and the moderator may create an empty synthetic log only after a subagent crash). `null` for turns that do not dispatch a CLI subagent, including `budget_exhausted` skips and composed-role parent turns that set `sub_run_id`.
+- `retry_log_path` — relative path to the retry attempt's raw stdout log (e.g., `agents/codex.7r1.log`) when the subagent retried this turn (rate-limit/timeout retry, exit-0 empty-stdout retry, or contract re-prompt); `null` otherwise. Naming is uniform: `<cli>.<turn>r1.log`. There is at most one retry per turn under any policy, so `r2` never exists.
 - `sub_run_id` — set when the turn was filled by a composed sub-debate (per `../../debate-agenda/references/composition.md`); names the sub-run dir under `<run-dir>/sub/`.
 
 Non-turn ledger lines (e.g., automatic transcript summaries, sub-transcript reads) appear with `"action": "<name>"` instead of `turn`/`role`/`cli`. Examples:

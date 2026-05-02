@@ -25,7 +25,7 @@ Glossary (used throughout this skill bundle, single canonical meaning):
 ```
 senate
   → debate-agenda     (optional)   — plan: pick format, pick roster, sequence stages, ask if needed
-  → moderate-debate                 — run: drive turns, enforce contracts, manage context, handle failures
+  → moderate-debate                 — run: dispatch per-turn subagents, manage context, handle failures
   → meeting-note                    — consolidate: write verdict.md and meeting-notes.md
 ```
 
@@ -125,9 +125,9 @@ Load each reference **only** when its condition fires:
 ## Sub-skills (lifecycle phases)
 
 - `../debate-agenda/` — plan: format selection, roster, stage sequencing, composition, branching. Also hosts the format library at `../debate-agenda/formats/`.
-- `../moderate-debate/` — run: turns, contracts, failures, budget, checkpoints, shared and private context.
+- `../moderate-debate/` — run: prompt construction, per-turn subagent dispatch, transcript/context commits, failures, budget, checkpoints.
 - `../meeting-note/` — consolidate: verdict.md and meeting-notes.md.
 
 ## Primitives
 
-- `../invoke-agent/` — per-CLI invocation playbooks (used by `moderate-debate`, referenced by `debate-agenda` for validation).
+- `../invoke-agent/` — per-CLI invocation playbooks (read by per-turn subagents, referenced by `debate-agenda` for roster validation).

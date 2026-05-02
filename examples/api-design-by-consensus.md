@@ -1,14 +1,16 @@
 # Design an API by consensus
 
-A `consensus` debate is the right format when the deliverable is a *document* — an API surface, a spec, a plan — and you want multiple models to converge on it. Every contributor is a peer; there are no adversarial roles. The output is the agreed artifact, not a ruling.
+The `consensus` preset of the `workshop` primitive is the right fit when the deliverable is a *document* — an API surface, a spec, a plan — and you want multiple models to converge on it. Every contributor is a peer; there are no adversarial roles. The output is the agreed artifact, not a ruling.
 
 ## When to pick consensus (vs. committee or peer-review)
 
-- **consensus** — *"design this API together"* — every CLI proposes, all critique each other's drafts, then they iterate until they converge. The output is one merged design.
-- **committee** — *"draft a memo / ADR / position paper"* — small group deliberates in private; an editor writes the final doc. Better when you want one voice on the page.
-- **peer-review** — *"review this design doc"* — you already have a draft; reviewers critique it independently and an editor adjudicates. Better when there's a single author.
+All three are presets, not standalone formats. They sit inside two primitives — `workshop` (committee + consensus) and `panel` (peer-review). Pick the one whose interaction shape matches your problem.
 
-If you don't have a draft yet and want multiple models to *jointly produce* one, consensus fits. If you do, peer-review fits. If you want a polished one-voice document, committee fits.
+- **`workshop:consensus`** — *"design this API together"* — every CLI proposes, all critique each other's drafts, then they iterate until they converge. The output is one merged design.
+- **`workshop:committee`** — *"draft a memo / ADR / position paper"* — small group deliberates in private; an editor writes the final doc. Better when you want one voice on the page.
+- **`panel:peer-review`** — *"review this design doc"* — you already have a draft; reviewers critique it independently and an editor adjudicates. Better when there's a single author.
+
+If you don't have a draft yet and want multiple models to *jointly produce* one, `workshop:consensus` fits. If you do, `panel:peer-review` fits. If you want a polished one-voice document, `workshop:committee` fits.
 
 ## The situation
 
@@ -73,7 +75,7 @@ Termination: all contributors report `"changed": false` and no `remaining_concer
 ## Common pitfalls
 
 - **Under-specified requirements.** Consensus exposes ambiguity ruthlessly. If contributors keep disagreeing on the same axis (e.g., one wants cursor pagination, another offset, another both), the requirement on pagination wasn't pinned. Re-prompt with a concrete constraint and re-run.
-- **Treating one contributor as the author.** Consensus is symmetric. If you want one model to draft and others to critique, pick **peer-review**, not consensus.
+- **Treating one contributor as the author.** Consensus is symmetric. If you want one model to draft and others to critique, pick `panel:peer-review`, not `workshop:consensus`.
 - **Round count too low.** Default is 3. For genuinely complex designs (auth flows, schema evolution, multi-step workflows), bump to 4–5. *"max_rounds: 5"* in the prompt overrides the default.
 - **Arbiter doing too much.** The arbiter shouldn't be deciding the design; it's deciding whether the contributors agree. If the verdict reads like a fourth opinion rather than a synthesis of three, the arbiter overstepped — note it and re-run with a different arbiter.
 
@@ -81,4 +83,4 @@ Termination: all contributors report `"changed": false` and no `remaining_concer
 
 - **Adopt or refine.** The artifact is yours to take. If it's `converged`, you have a design. If it's `partial` or `stalled`, treat the **Remaining concerns** as the open questions and either resolve them yourself or re-run consensus on just those points.
 - **Spec it.** Consensus is good at the *shape* of an API; specifying it (OpenAPI, types) is downstream work. Hand the artifact to a single model and ask it to produce the formal spec — that's not a debate, that's transcription.
-- **Validate.** Once the design is committed, the next debate worth running is a `red-team` on the design — *"find failure modes in this saved-searches API"*. Consensus produces designs that all contributors agree on; red-team finds the cases none of them thought of.
+- **Validate.** Once the design is committed, the next debate worth running is a `court:red-team` on the design — *"find failure modes in this saved-searches API"*. Consensus produces designs that all contributors agree on; the `red-team` preset finds the cases none of them thought of.

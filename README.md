@@ -84,7 +84,7 @@ Five skills, organized around a clean lifecycle:
 ```
 senate
   → debate-agenda    (optional)   — plan: pick format, pick roster, sequence stages, ask if needed
-  → moderate-debate                — run: drive turns, enforce contracts, manage context, handle failures
+  → moderate-debate                — run: dispatch per-turn subagents, manage context, handle failures
   → meeting-note                   — consolidate: write verdict.md and meeting-notes.md
 ```
 
@@ -106,11 +106,11 @@ Sequence of execution for a single run:
          └─────────┬─────────┘
                    │
                    ▼
-         ┌───────────────────┐    per turn    ┌──────────────────┐
-         │  moderate-debate  │ ─────────────▶ │   invoke-agent   │
-         │    (moderator)    │ ◀───────────── │    (per-CLI)     │
-         └─────────┬─────────┘    response    └────────┬─────────┘
-                   │                                   │
+         ┌───────────────────┐  dispatches   ┌──────────────────┐
+         │  moderate-debate  │ ─────────────▶ │ per-turn subagent│
+         │    (moderator)    │ ◀───────────── │ + invoke-agent   │
+         └─────────┬─────────┘ structured     └────────┬─────────┘
+                   │ result                            │ shells out
                    │ appends                           ▼
                    │   ▶ transcript.jsonl     codex · gemini · cursor
                    │   ▶ context.md           kimi  · claude
@@ -126,15 +126,15 @@ Sequence of execution for a single run:
               summary + verdict
 ```
 
-`moderate-debate` loops over turns, calling `invoke-agent` for each participant; pipelines repeat the planner/moderator pair per stage under `stages/<N>-<name>/` before `meeting-note` consolidates.
+`moderate-debate` loops over turns, dispatching each turn's CLI work into a fresh per-turn subagent. The subagent reads the relevant `invoke-agent` playbook, shells out to the CLI, writes raw logs, validates contracts/re-prompts once, and returns only a structured result for the moderator to commit. Pipelines repeat the planner/moderator pair per stage under `stages/<N>-<name>/` before `meeting-note` consolidates.
 
 | Skill | Purpose |
 | --- | --- |
 | `senate` | Top-level entry. Mints the run dir and routes through the three lifecycle skills. |
 | `debate-agenda` | Plans the debate. Picks the format, picks the roster, sequences multi-stage pipelines, resolves composed (sub-debate) roles, asks for clarification when the request is ambiguous. Hosts primitive formats at `formats/` and pipeline recipes in `references/stages.md`. |
-| `moderate-debate` | Runs the debate from the agenda. Drives turns, enforces output contracts, manages shared and private context, handles failures, manages checkpoints, calls back to `debate-agenda` for mid-run re-plans. |
+| `moderate-debate` | Runs the debate from the agenda. Drives turns by dispatching standalone per-turn subagents, commits transcript/context updates, handles failures, manages checkpoints, calls back to `debate-agenda` for mid-run re-plans. |
 | `meeting-note` | Consolidates the run. Reads agenda + transcript + context + per-stage verdicts; writes `verdict.md` and `meeting-notes.md`. |
-| `invoke-agent` | Per-CLI invocation playbook (codex, gemini, cursor, kimi, claude). Used by `moderate-debate`. |
+| `invoke-agent` | Per-CLI invocation playbook (codex, gemini, cursor, kimi, claude). Read by per-turn subagents dispatched from `moderate-debate`. |
 
 Each skill follows the [Agent Skills spec](https://agentskills.io/specification): a `SKILL.md` at the root and on-demand documentation under `references/`. The `evals/` directory is a sibling evaluation harness (not a shipped skill) — see [Evaluating](#evaluating) below.
 
@@ -163,6 +163,8 @@ Single-stage runs and multi-stage pipelines share the same workspace conventions
   agenda.md          # the plan, with revisions log
   context.md         # shared scratchpad — every agent reads each turn
   agents/<cli>.md    # per-CLI private memory across turns
+  agents/<cli>.<turn>.log    # raw stdout written by the per-turn subagent
+  agents/<cli>.<turn>.stderr # raw stderr when non-empty
   transcript.jsonl   # append-only structured per-turn record
   verdict.md         # canonical decision (meeting-note writes this)
   meeting-notes.md   # user-facing summary (meeting-note writes this)

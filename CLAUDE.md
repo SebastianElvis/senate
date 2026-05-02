@@ -17,25 +17,25 @@ Five skills compose a debate lifecycle. Reading any one skill in isolation is mi
 ```
 senate (orchestrator)
   → debate-agenda  (planner)   — writes agenda.md
-  → moderate-debate (moderator) — runs turns from agenda.md, writes transcript.jsonl
+  → moderate-debate (moderator) — dispatches per-turn subagents, writes transcript.jsonl
   → meeting-note   (scribe)    — writes verdict.md + meeting-notes.md
-invoke-agent (primitive)       — per-CLI invocation playbooks; called by moderate-debate
+invoke-agent (primitive)       — per-CLI invocation playbooks; read inside per-turn subagents
 ```
 
 Canonical role names (used everywhere — keep them consistent):
 
 - **Orchestrator** = `senate` skill. Lifecycle conductor.
 - **Planner** = `debate-agenda` skill. Produces `agenda.md`.
-- **Moderator** = `moderate-debate` skill. Runs turns.
+- **Moderator** = `moderate-debate` skill. Builds turn prompts, dispatches standalone per-turn subagents, and commits their structured results.
 - **Scribe** = `meeting-note` skill. Writes the user-facing summary.
 - **Synthesizer** = the in-format role (judge/speaker/editor/arbiter) for one stage's synthesis. **Distinct from the scribe.**
 - **Format** = a primitive debate playbook in `skills/debate-agenda/formats/`. Multi-stage pipelines are agenda recipes in `skills/debate-agenda/references/stages.md` that sequence those primitives.
-- **Playbook** = a per-CLI invocation reference in `skills/invoke-agent/references/`.
+- **Playbook** = a per-CLI invocation reference in `skills/invoke-agent/references/`, loaded by the per-turn subagent rather than the moderator's long-lived context.
 - **Run** = one execution; lives at `<cwd>/.senate/runs/<id>/`.
 
 ### Run-dir contract (load-bearing)
 
-All runtime state lives at `<cwd>/.senate/runs/<id>/` — **never** inside the skill repo. The skill directory is read-only at runtime. Files: `agenda.md`, `context.md` (shared scratchpad), `agents/<cli>.md` (per-CLI private memory), `transcript.jsonl`, `verdict.md`, `meeting-notes.md`, `state.json`, optional `stages/<N>-<name>/` for pipelines, optional `failures.md`. The schema is normative — all five skills read/write against it. See `skills/senate/references/workspace.md`.
+All runtime state lives at `<cwd>/.senate/runs/<id>/` — **never** inside the skill repo. The skill directory is read-only at runtime. Files: `agenda.md`, `context.md` (shared scratchpad), `agents/<cli>.md` (per-CLI private memory), `agents/<cli>.<turn>.log` / `.stderr` (raw CLI artifacts written by per-turn subagents), `transcript.jsonl`, `verdict.md`, `meeting-notes.md`, `state.json`, optional `stages/<N>-<name>/` for pipelines, optional `failures.md`. The schema is normative — all five skills read/write against it. See `skills/senate/references/workspace.md`.
 
 ### Cross-skill references
 
