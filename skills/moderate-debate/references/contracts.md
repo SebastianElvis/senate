@@ -12,7 +12,7 @@ A contract has up to five parts (the first four are required):
 2. **Example** — a concrete, well-formed instance. Showing, not just telling.
 3. **Extraction rule** — how to pull the structured block out of the agent's full reply.
 4. **Re-prompt template** — the exact text to send back to the agent on a first failure.
-5. **Validators** *(optional)* — a list of named, free-form predicates the subagent runs against the agent's reply alongside schema validation. Each entry has a `name`, a one-sentence description, and a check (regex, substring match, or short rule the subagent can evaluate from the reply text alone — no external state). Failure of any validator is treated identically to a schema-validation failure: same shared retry budget, same `error.kind = "contract_violation"` if validation still fails. Validators are how format-level rules like "no critique language in phase 1" (`brainstorm`) or "paragraphs are numbered" (`rfc`) ride along on the contract's failure path without needing a separate enforcement mechanism.
+5. **Validators** *(optional)* — a list of named, free-form predicates the subagent runs against the agent's reply alongside schema validation. Each entry has a `name`, a one-sentence description, and a check (regex, substring match, or short rule the subagent can evaluate from the reply text alone — no external state). Failure of any validator is treated identically to a schema-validation failure: same shared retry budget, same `error.kind = "contract_violation"` if validation still fails. Validators are how format-level rules like "no critique language in phase 1" (`brainstorm`) ride along on the contract's failure path without needing a separate enforcement mechanism.
 
 Contracts live inline in the format file that requires them. When the moderator reads a format file, it also reads the contract(s) referenced there and forwards the whole contract object to the per-turn subagent (see `../SKILL.md` §4a).
 
@@ -77,7 +77,7 @@ Required format (fenced json block, no other text):
 Reply now with ONLY the fenced json block. No prose.
 ```
 
-For **free-text contracts** (e.g., `brainstorm-idea-list`, `rfc-draft`), the format author writes a template that names the specific structural rules and validators that failed — schema headings, paragraph numbering, no-critique language, etc. — and asks for a corrected full reply. JSON-only language is wrong here and must not be reused. See the `rfc-draft` and `brainstorm-idea-list` contract blocks in their respective format files for examples.
+For **free-text contracts** (e.g., `brainstorm-idea-list`), the format author writes a template that names the specific structural rules and validators that failed — schema headings, no-critique language, etc. — and asks for a corrected full reply. JSON-only language is wrong here and must not be reused. See the `brainstorm-idea-list` contract block in `brainstorm.md` for an example.
 
 ## Canonical contracts
 
@@ -85,7 +85,7 @@ These are reused across formats. Formats may define format-specific contracts in
 
 ### `vote`
 
-Used by parliament and workshop (preset: committee) closure votes.
+Used by parliament closure votes. (`committee` defines its own format-local `committee-final-vote` contract with `approve` / `approve_with_dissent` / `block` values; see that format file.)
 
 **Schema:**
 
@@ -109,35 +109,9 @@ Used by parliament and workshop (preset: committee) closure votes.
 
 **Fallback on terminal failure:** `abstain` with `confidence: 0` and the raw reply preserved in `transcript.jsonl.text`.
 
-### `refine`
-
-Used by workshop (preset: consensus) refine phase.
-
-**Schema:**
-
-```json
-{
-  "changed": true,
-  "confidence": 0.0,
-  "remaining_concerns": ["..."]
-}
-```
-
-**Example:**
-
-```json
-{"changed": true, "confidence": 0.67, "remaining_concerns": ["The cache invalidation story still needs an owner."]}
-```
-
-**Extraction rule:** parse the last fenced `json` block in the reply.
-
-**Re-prompt template:** use the canonical JSON-shape template above with the `refine` schema filled in. Reply must be only the fenced JSON block.
-
-**Fallback on terminal failure:** treat as `{"changed": false, "confidence": 0.0, "remaining_concerns": ["agent failed contract"]}`.
-
 ### `ruling`
 
-Used by court (presets: court, appeals-court). Other presets define their own verdict contracts inline.
+Used by court. Other formats (red-team, peer-review) define their own verdict contracts inline.
 
 **Schema:**
 

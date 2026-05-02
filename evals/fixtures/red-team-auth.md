@@ -1,7 +1,6 @@
 ---
 fixture_id: red-team-auth
-format: court
-preset: red-team
+format: red-team
 roster:
   - {role: attacker, cli: codex}
   - {role: defender, cli: claude}

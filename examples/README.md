@@ -2,15 +2,15 @@
 
 Three end-to-end walk-throughs of the most common ways to use `senate`. Each one is a complete recipe: the situation, the prompt to give the orchestrator, what shows up on disk, and how to read the result.
 
-Pick the one closest to your problem and read it before running anything — the difference between *"my refactor is safe"* (court), *"design this API"* (workshop:consensus), and *"should we migrate?"* (parliament) is the difference between three useful runs and three confused ones.
+Pick the one closest to your problem and read it before running anything — the difference between *"my refactor is safe"* (court), *"draft this spec"* (committee), and *"should we migrate?"* (parliament) is the difference between three useful runs and three confused ones.
 
-| Example | Format · Preset | When to pick this |
+| Example | Format | When to pick this |
 | --- | --- | --- |
-| [Review a PR as a court](./pr-review-as-court.md) | `court` (primitive — uses the default `court` preset) | A specific change is on the table; you want the strongest case for and against it, then a ruling. |
-| [Design an API by consensus](./api-design-by-consensus.md) | `workshop` · `consensus` preset | The deliverable is a document — a spec, an API surface, a plan — and you want multiple models to converge on it. |
-| [Weigh a migration in parliament](./migration-by-parliament.md) | `parliament` (primitive) | The question is open ("should we do X?") and you want diversity of perspective and a recorded dissent, not a single ruling. |
+| [Review a PR as a court](./pr-review-as-court.md) | `court` | A specific change is on the table; you want the strongest case for and against it, then a ruling. |
+| [Draft a spec by committee](./draft-spec-by-committee.md) | `committee` | The deliverable is a document — a spec, an API surface, a plan — and you want the team to deliberate while an editor closes on final text. |
+| [Weigh a migration in parliament](./migration-by-parliament.md) | `parliament` | The question is open ("should we do X?") and you want diversity of perspective and a recorded dissent, not a single ruling. |
 
-The terminology: a **primitive** is one of the five interaction-contract playbooks (`parliament`, `court`, `panel`, `workshop`, `brainstorm`); a **preset** is a named configuration of a primitive (e.g., `workshop:consensus`, `court:appeals-court`, `panel:rfc`). The example walk-throughs use the friendly preset names in prose; the orchestrator routes them to the right primitive.
+The library has six flat formats — `parliament`, `court`, `red-team`, `peer-review`, `committee`, `brainstorm` — each owning one interaction-contract axis. The walk-throughs above cover three of them; the other three are documented in [`skills/debate-agenda/formats/`](../skills/debate-agenda/formats/).
 
 If none of these fits your task, ask the orchestrator *"which format should I use?"* — `debate-agenda` will recommend one with a one-paragraph rationale.
 

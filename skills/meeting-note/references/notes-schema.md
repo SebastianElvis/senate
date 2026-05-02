@@ -24,7 +24,7 @@ Lives at `<run-dir>/notes.md`. Written by `meeting-note`.
 
 ## Decision
 
-<2-4 sentences elaborating the verdict. For voting formats, include the tally. For consensus, the converged plan in plain prose. For court, the ruling.>
+<2-4 sentences elaborating the verdict. For voting formats, include the tally. For committee, the published artifact in plain prose. For court, the ruling.>
 
 ## Why
 
@@ -108,7 +108,7 @@ The same shape, with two adjustments: the `## Decision` section names the pipeli
 | Stage | Format | Disposition | Verdict |
 | --- | --- | --- | --- |
 | 1. draft | committee | completed | [stages/1-draft/verdict.md](stages/1-draft/verdict.md) |
-| 2. review | rfc | completed | [stages/2-review/verdict.md](stages/2-review/verdict.md) |
+| 2. review | peer-review | completed | [stages/2-review/verdict.md](stages/2-review/verdict.md) |
 | 3. synthesize | committee | completed | [stages/3-synthesize/verdict.md](stages/3-synthesize/verdict.md) |
 
 ## Final deliverable
@@ -125,7 +125,7 @@ Each canonical pipeline declares the **inner** structure of this section in its 
 
 \`\`\`json
 {
-  "pipeline": "rfc-pipeline",
+  "pipeline": "draft-review-finalize",
   "stages_completed": 3,
   "stages_stalled": 0,
   "final_disposition": "completed",
@@ -213,10 +213,9 @@ Only when the format implies them:
 
 - `committee` produced a doc → file the doc, circulate for sign-off.
 - `red-team` produced findings → open tickets for each.
-- `consensus` produced a spec → implement, validate.
 - `peer-review` produced revisions → author addresses each.
 
-For formats whose output is just a decision (parliament, court, oracle), action items are usually empty unless the user specifically asked for them.
+For formats whose output is just a decision (parliament, court), action items are usually empty unless the user specifically asked for them.
 
 Use markdown checkboxes (`- [ ]`) so the user can check them off in their host agent.
 

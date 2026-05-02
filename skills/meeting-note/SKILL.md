@@ -41,7 +41,7 @@ The file MUST include both:
 - The **load-bearing structured outcome** as a fenced JSON block (the data downstream tools or humans can parse).
 - The **prose user-facing summary** (TL;DR, decision elaboration, why, dissent, process, action items).
 
-Primitive files (parliament, court, panel, workshop, brainstorm) sometimes say "the speaker writes verdict.md" — that wording refers to the synthesis turn's *content production* (the stage-level `stages/<n>-<name>/verdict.md`), not to who writes the canonical user-facing file. The moderator never writes top-level `notes.md`.
+Format files (parliament, court, red-team, peer-review, committee, brainstorm) sometimes say "the speaker / judge / editor writes verdict.md" — that wording refers to the synthesis turn's *content production* (the stage-level `stages/<n>-<name>/verdict.md`), not to who writes the canonical user-facing file. The moderator never writes top-level `notes.md`.
 
 Stage-level `stages/<n>-<name>/verdict.md` files are written by the moderator during the run and are the bindings target for pipelines. You do **not** rewrite them; you stitch their content into `notes.md`'s narrative.
 
@@ -76,7 +76,7 @@ Per `references/notes-schema.md`. Keep it scannable: a busy user reading only th
 
 ### 6. (Optional) emit action items
 
-If the debate's format implies follow-up work (a `workshop:committee` produced an ADR that needs to be filed; a `court:red-team` produced findings that need tickets; a `workshop:consensus` produced a spec that needs implementing), include an `## Action items` section with concrete next steps.
+If the debate's format implies follow-up work (a `committee` produced an ADR that needs to be filed; a `red-team` produced findings that need tickets; a `peer-review` produced revisions that need addressing), include an `## Action items` section with concrete next steps.
 
 Don't fabricate action items for formats that don't imply any (a `parliament` resolving an open question doesn't necessarily produce action items).
 

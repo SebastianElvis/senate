@@ -17,8 +17,9 @@ Parliament is the only primitive that closes by tally. (Vote-vs-ruling is a beha
 | If the task is… | The right primitive is… |
 | --- | --- |
 | "Sides argue with an arbiter" | court |
-| "Independent panel of experts" | panel |
-| "Peers co-author a draft" | workshop |
+| "Find ways this could fail" | red-team |
+| "Independent reviewers each judge a submission" | peer-review |
+| "Peers co-author a shared draft" | committee |
 | "Generate options" | brainstorm |
 
 ## Summary

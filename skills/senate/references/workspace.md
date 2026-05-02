@@ -55,7 +55,7 @@ Exception: if a per-turn subagent crashes or returns malformed data before creat
 <cwd>/
   .senate/
     runs/
-      2026-04-27-1500-rfc-pipeline/
+      2026-04-27-1500-draft-review-finalize/
         agenda.md
         context.md
         transcript.jsonl

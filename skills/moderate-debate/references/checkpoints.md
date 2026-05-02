@@ -64,7 +64,7 @@ Example surface:
 **Preview of stage 2 verdict:**
 <first 40 lines of verdict.md>
 
-[Full verdict: `.senate/runs/2026-04-20-1500-rfc-pipeline/stages/2-review/verdict.md`]
+[Full verdict: `.senate/runs/2026-04-20-1500-draft-review-finalize/stages/2-review/verdict.md`]
 
 **Options:**
 - `continue` — proceed to stage 3.

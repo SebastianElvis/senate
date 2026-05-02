@@ -25,7 +25,7 @@ Pass = mean ≥ 3.5 AND tl_dr_fidelity ≥ 4 (the TL;DR must not lie about the d
 - `wall_of_text` — too long to skim
 - `buries_dissent` — disagreement omitted or hidden
 - `pure_paraphrase` — narrative sections add nothing beyond the decision-grade sections
-- `missing_next_steps` — Action items absent when the format clearly implies them (committee, red-team, peer-review, consensus)
+- `missing_next_steps` — Action items absent when the format clearly implies them (committee, red-team, peer-review)
 
 ## Output contract
 

@@ -15,13 +15,13 @@
 | If the task is… | The right primitive is… |
 | --- | --- |
 | "Pick one of these options" | parliament (vote) or court (rule) |
-| "Co-author a shared draft" | workshop |
-| "Independent panel critiques" | panel |
-| "Find what's wrong with this proposal" | court (preset: red-team) |
+| "Co-author a shared draft" | committee |
+| "Independent reviewers critique a submission" | peer-review |
+| "Find what's wrong with this proposal" | red-team |
 
 ## Summary
 
-Three phases: everyone generates freely with no critique allowed; ideas are clustered and ranked; top-k ideas are developed in depth. Common follow-up: feed the top option(s) to a `parliament` or `workshop:committee` for a decision.
+Three phases: everyone generates freely with no critique allowed; ideas are clustered and ranked; top-k ideas are developed in depth. Common follow-up: feed the top option(s) to a `parliament` or `committee` for a decision.
 
 ## Roles
 
@@ -149,7 +149,7 @@ Output contract: markdown with those four sections. The facilitator's reply beco
 ## Termination
 
 - After phase 4. Brainstorm does not make decisions — it produces options.
-- Common follow-up: feed the top option(s) to a `parliament` or `workshop:committee` for a decision.
+- Common follow-up: feed the top option(s) to a `parliament` or `committee` for a decision.
 
 ## Defaults
 

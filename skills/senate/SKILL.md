@@ -1,6 +1,6 @@
 ---
 name: senate
-description: Top-level orchestrator for multi-agent debates between coding CLIs (codex, gemini, cursor, kimi, claude). Routes a request through three sub-skills — debate-agenda (plan), moderate-debate (run), meeting-note (consolidate) — and returns a single user-facing notes.md summary. Use this skill when the user wants a debate, second opinion, adversarial review, or cross-model consensus on a non-trivial question — even if they don't say "debate" — and especially when they say "debate", "parliament", "court", "consensus", "senate", "have X and Y argue", or "ask multiple models".
+description: Top-level orchestrator for multi-agent debates between coding CLIs (codex, gemini, cursor, kimi, claude). Routes a request through three sub-skills — debate-agenda (plan), moderate-debate (run), meeting-note (consolidate) — and returns a single user-facing notes.md summary. Use this skill when the user wants a debate, second opinion, adversarial review, or cross-model agreement on a non-trivial question — even if they don't say "debate" — and especially when they say "debate", "parliament", "court", "peer-review", "red-team", "committee", "senate", "have X and Y argue", or "ask multiple models".
 license: MIT
 ---
 
@@ -14,11 +14,9 @@ Glossary (used throughout this skill bundle, single canonical meaning):
 - **Planner** — the `debate-agenda` skill: produces `agenda.md`.
 - **Moderator** — the `moderate-debate` skill: runs turns from the agenda.
 - **Scribe** — the `meeting-note` skill: writes the merged user-facing `notes.md`.
-- **Synthesizer** — the in-format role (speaker / judge / editor / arbiter / synthesizer) that produces a single stage's synthesis content. Distinct from the scribe.
-- **Format** — a primitive debate playbook in `../debate-agenda/formats/`.
-- **Primitive** — a single-stage format (parliament, court, panel, workshop, brainstorm).
-- **Preset** — a named configuration of a primitive that is a closed family (e.g., `court:appeals-court`, `panel:rfc`, `workshop:committee`).
-- **Pipeline** — a multi-stage agenda recipe (rfc-pipeline, design-review, …) expanded by `debate-agenda` with `mode: pipeline`.
+- **Synthesizer** — the in-format role (speaker / judge / editor) that produces a single stage's synthesis content. Distinct from the scribe.
+- **Format** — a flat single-stage debate playbook in `../debate-agenda/formats/`. Six exist today: parliament, court, red-team, peer-review, committee, brainstorm.
+- **Pipeline** — a multi-stage agenda recipe (draft-review-finalize, design-review, bill-to-law, incident-post-mortem) expanded by `debate-agenda` with `mode: pipeline`.
 - **Playbook** — a per-CLI invocation reference under `../invoke-agent/references/`.
 - **Run** — one execution; lives at `<cwd>/.senate/runs/<id>/`.
 
@@ -33,7 +31,7 @@ senate
 
 Activate when the user asks for any of:
 
-- A debate, parliament, court, consensus, peer-review, brainstorm, RFC, etc., between multiple agents/models.
+- A debate, parliament, court, peer-review, red-team, committee, brainstorm, etc., between multiple agents/models.
 - A "second opinion" or "third opinion" from another CLI.
 - Adversarial review where one model attacks and another defends.
 - Cross-model agreement on a decision, design, or plan.
@@ -44,7 +42,7 @@ If the user just wants one model's answer, **do not use this skill** — call th
 ## Inputs
 
 1. **Task** — the question or artifact to debate.
-2. **Format** (optional) — parliament, court, panel, workshop, brainstorm; plus a preset where applicable (e.g., `court:red-team`, `panel:oracle`, `workshop:committee`). If unspecified, the planner will choose.
+2. **Format** (optional) — parliament, court, red-team, peer-review, committee, brainstorm. If unspecified, the planner will choose.
 3. **Roster** (optional) — which CLIs participate. Default: `codex, gemini, claude`.
 4. **Multi-stage hint** (optional) — pipeline language ("draft, then review") triggers multi-stage planning.
 5. **`prepare_agenda`** (option) — `auto` (default) | `true` | `false`.

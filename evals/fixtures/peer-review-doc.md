@@ -1,7 +1,6 @@
 ---
-fixture_id: peer-review-rfc
-format: panel
-preset: peer-review
+fixture_id: peer-review-doc
+format: peer-review
 roster:
   - {role: author, cli: claude}
   - {role: reviewer, cli: codex}
@@ -20,9 +19,9 @@ judge_rubrics: [verdict, agenda, meeting_notes]
 
 # Task
 
-Author a brief RFC (≤400 words) proposing that the team adopt **structured logging with JSON output** across all backend services, replacing the current mix of plain-text logs. The team is small (8 engineers), has 12 services in production, and currently relies on grepping log files in incidents.
+Author a brief design doc (≤400 words) proposing that the team adopt **structured logging with JSON output** across all backend services, replacing the current mix of plain-text logs. The team is small (8 engineers), has 12 services in production, and currently relies on grepping log files in incidents.
 
-The author drafts the RFC. Two reviewers raise concerns blindly (each without seeing the other's comments). The author revises once. The editor rules `accept`, `minor_revision`, `major_revision`, or `reject`, citing which reviewer concerns drove the call.
+The author drafts the doc. Two reviewers raise concerns blindly (each without seeing the other's comments). The author revises once. The editor rules `accept`, `minor_revision`, `major_revision`, or `reject`, citing which reviewer concerns drove the call.
 
 # Expected verdict shape
 

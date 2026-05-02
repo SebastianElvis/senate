@@ -1,14 +1,14 @@
 # Weigh a migration in parliament
 
-The `parliament` primitive is the right format when the question is *open* — *"should we do X?"* — and you want diversity of perspective with a recorded vote and dissent. Multiple parties argue from different angles, then vote. The speaker tallies and writes the verdict.
+The `parliament` format is the right fit when the question is *open* — *"should we do X?"* — and you want diversity of perspective with a recorded vote and dissent. Multiple parties argue from different angles, then vote. The speaker tallies and writes the verdict.
 
-## When to pick parliament (vs. court or consensus)
+## When to pick parliament (vs. court or committee)
 
-`parliament` and `court` are two of the five primitive formats; `consensus` is a preset of the `workshop` primitive. Pick by what you want out the other side:
+Pick by what you want out the other side:
 
 - **`parliament`** — *"should we migrate to Rust?"* — open question, multiple legitimate viewpoints, you want a vote *and* the dissent on the record.
-- **`court:court`** — *"is this PR safe to merge?"* — binary, adversarial, single ruling.
-- **`workshop:consensus`** — *"design the migration plan"* — converging on a document, not a decision.
+- **`court`** — *"is this PR safe to merge?"* — binary, adversarial, single ruling.
+- **`committee`** — *"design the migration plan"* — converging on a document, not a decision.
 
 Use parliament when the answer might reasonably be yes, no, or *"yes, but with conditions"* — and when you want the dissenting argument written down even if you go ahead.
 
@@ -84,10 +84,10 @@ The structured outcome at the end of `notes.md` (`outcome`, `tally`, `speaker_ti
 - **Stacking the roster.** If both `mp_pro` and `mp_neutral` are models that tend toward the same take, the debate is decided before it starts. Pick CLIs that genuinely disagree on the topic.
 - **Skipping mp_neutral.** A 2-MP parliament (pro vs. con) collapses toward court. The neutral MP exists to surface considerations neither side raised — *"the choice isn't 'rewrite everything' vs. 'do nothing'; you could rewrite the hot path only"*. That third angle is most of the value.
 - **Treating the tally as the answer.** A 2–1 vote on a migration is not a green light. Read **Dissent** — that's where the unmitigated risks live.
-- **Re-running until you like the answer.** Don't. If you disagree with the verdict, run a `court:appeals-court` on it, or run a `workshop:consensus` to design the migration plan and let the disagreements surface there.
+- **Re-running until you like the answer.** Don't. If you disagree with the verdict, run a fresh `court` with a different roster and the prior verdict in context, or run a `committee` to design the migration plan and let the disagreements surface there.
 
 ## After the run
 
 - **Decide.** The verdict is one well-reasoned argument; you still own the decision. If the parliament voted *pass* and the dissent was thin, proceed. If it voted *fail* and the dissent (the pro case) was thin, don't.
 - **Use the dissent.** Whatever the decision, the dissent section is the most actionable thing in the verdict — it's the risks or upside you'd otherwise miss.
-- **Plan the next debate.** A migration decision usually triggers a follow-up *"how do we do it?"* — that's a `workshop:consensus` (design the migration plan) or the `design-review` pipeline recipe (`panel:oracle` → `workshop:committee` → `panel:peer-review` ‖ `court:red-team` → `workshop:committee`; the recipe lives in `skills/debate-agenda/references/stages.md`). Parliament is the *whether*; the *how* is downstream.
+- **Plan the next debate.** A migration decision usually triggers a follow-up *"how do we do it?"* — that's a `committee` (design the migration plan) or the `design-review` pipeline recipe (`committee` → (`peer-review` ‖ `red-team`) → `committee`; the recipe lives in `skills/debate-agenda/references/stages.md`). Parliament is the *whether*; the *how* is downstream.

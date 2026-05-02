@@ -1,7 +1,6 @@
 ---
 fixture_id: court-pr-review
 format: court
-preset: court
 roster:
   - {role: prosecution, cli: codex}
   - {role: defense, cli: claude}

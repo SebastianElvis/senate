@@ -84,9 +84,8 @@ open_questions: []
 | --- | --- | --- | --- |
 | `index` | int | yes | 1-indexed. Monotonic across `stages`. |
 | `name` | string | yes | Short, lowercase, hyphenated. Becomes a directory name. |
-| `format` | string | yes | One of the primitives in `../formats/` (parliament, court, panel, workshop, brainstorm). |
-| `preset` | string | conditional | Required when the primitive is a closed family (court, panel, workshop). Names which preset to run (e.g., `red-team`, `rfc`, `committee`). Omit for parliament and brainstorm. |
-| `roster` | list | yes | Each entry: `{ role, cli, model? }`. Roles must match the format/preset's role list. |
+| `format` | string | yes | One of the formats in `../formats/`: `parliament`, `court`, `red-team`, `peer-review`, `committee`, `brainstorm`. |
+| `roster` | list | yes | Each entry: `{ role, cli, model? }`. Roles must match the format's role list. |
 | `rounds` | int | no | Falls back to the format's default. |
 | `budget` | object | no | `wall_clock_sec`, `total_tokens`, `turn_timeout_sec`. Falls back to defaults in `../../moderate-debate/references/budget.md`. |
 | `input_bindings` | list | no | Names of bindings this stage consumes from prior stages. |
@@ -112,7 +111,6 @@ stages:
   - index: 1
     name: debate
     format: court
-    preset: court
     roster:
       - { role: prosecution, cli: codex }
       - { role: defense, cli: gemini }
@@ -150,7 +148,7 @@ Two rounds of prosecution / defense, then judge ruling. Verdict: sustain | dismi
 
 ## Multi-stage with bindings — example
 
-See `stages.md` for worked multi-stage examples, including `rfc-pipeline`.
+See `stages.md` for worked multi-stage examples, including `draft-review-finalize`.
 
 ## Revisions log
 
@@ -176,9 +174,8 @@ The frontmatter is updated to reflect the new state (e.g., the stage's roster en
 Before returning `status: ready`, the planner validates:
 
 - Every `cli` in every roster has a file at `../../invoke-agent/references/<cli>.md`.
-- Every stage `format` has a primitive file at `../formats/<format>.md`.
-- For closed-family primitives (court, panel, workshop), `preset` is set and the named preset exists in the primitive's preset table.
-- Every role named in a roster appears in that format/preset's role list.
+- Every stage `format` has a format file at `../formats/<format>.md`.
+- Every role named in a roster appears in that format's role list.
 - Every `input_bindings` entry refers to an `output_bindings` name from an earlier stage.
 - Stage indices are monotonic from 1.
 
