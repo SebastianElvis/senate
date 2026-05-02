@@ -1,90 +1,78 @@
 ---
 name: meeting-note
-description: Consolidates a finished debate run into user-facing meeting notes — reads the agenda, transcript, shared context, per-stage verdicts (multi-stage), and any failures, and writes the canonical verdict.md plus meeting-notes.md. Use this skill when moderate-debate has finished a run and the user needs a clean summary of what happened, what was decided, and what to do next, or when the user asks for "the notes" or "the summary" of a past debate run.
+description: Consolidates a finished debate run into a single user-facing notes.md — reads the agenda, transcript, shared context, and per-stage verdicts (multi-stage), and writes the canonical user-facing summary that merges what was decided (verdict) with what happened (meeting notes). Use this skill when moderate-debate has finished a run and the user needs a clean summary of what happened, what was decided, and what to do next, or when the user asks for "the notes", "the summary", or "the verdict" of a past debate run.
 license: MIT
 ---
 
 # meeting-note — consolidate the run into user-facing notes
 
-You are the **scribe**. The debate has already happened. Your job is to read everything the run produced and write a clean summary the user can act on.
+You are the **scribe**. The debate has already happened. Your job is to read everything the run produced and write a single clean summary the user can act on.
 
-A debate without good notes is a debate that gets re-litigated. The transcript captures everything; the meeting notes capture **what mattered**.
+A debate without good notes is a debate that gets re-litigated. The transcript captures everything; the notes capture **what mattered**.
 
 ## When to trigger
 
 Activate when:
 
 - `moderate-debate` finishes a run and `senate` invokes you.
-- A user asks for "the notes" or "the summary" of a past run.
+- A user asks for "the notes", "the summary", or "the verdict" of a past run.
 
 ## Inputs
 
 The run directory at `<cwd>/.senate/runs/<id>/`. Expect:
 
 - `agenda.md` — the plan (and any `## Revisions` entries).
-- `transcript.jsonl` — every turn.
+- `transcript.jsonl` — every turn (failure facts live here as per-turn `error` codes; there is no separate `failures.md`).
 - `context.md` — shared scratchpad accumulated during the run.
 - `agents/<cli>.md` — per-agent private memory (rarely interesting to the user, but available).
+- `agents/moderator.md` — moderator's governance log; surface non-trivial entries (re-plans, format swaps, tie-breaks) in the Process section.
 - `state.json` — final status.
-- For single-stage runs: a synthesizer turn already in the transcript (judge / speaker / editor / synthesizer).
-- For multi-stage runs: `stages/<N>-<name>/verdict.md` for each completed stage.
-- `failures.md` (if any failures occurred).
+- `stages/<n>-<name>/verdict.md` for each completed stage (always present — single-stage runs have exactly one).
 - `bindings.json` (multi-stage only).
 
-## Outputs
+## Output
 
-### `<run-dir>/verdict.md`
+### `<run-dir>/notes.md`
 
-You are the only writer of the top-level `verdict.md`. Schema in `references/verdict-schema.md`.
+You are the only writer of this file. It is the **single** user-facing summary; it merges what was previously split across `verdict.md` (canonical decision + structured outcome) and `meeting-notes.md` (TL;DR, narrative, action items). Schema in `references/notes-schema.md`.
 
-- **Single-stage runs:** read the synthesizer turn's structured output and prose from `transcript.jsonl`, package them into the canonical verdict shape.
-- **Multi-stage runs:** stitch each stage's `stages/<N>-<name>/verdict.md` (written by the moderator) into a top-level verdict. Each stage's own verdict file stays where it is; your job is the connective tissue.
+The file MUST include both:
 
-Primitive files (parliament, court, panel, workshop, brainstorm) sometimes say "the speaker writes verdict.md" — that wording refers to the synthesis turn's *content production*, not to who writes the canonical top-level file. The moderator never writes top-level `verdict.md`.
+- The **load-bearing structured outcome** as a fenced JSON block (the data downstream tools or humans can parse).
+- The **prose user-facing summary** (TL;DR, decision elaboration, why, dissent, process, action items).
 
-### `<run-dir>/meeting-notes.md`
+Primitive files (parliament, court, panel, workshop, brainstorm) sometimes say "the speaker writes verdict.md" — that wording refers to the synthesis turn's *content production* (the stage-level `stages/<n>-<name>/verdict.md`), not to who writes the canonical user-facing file. The moderator never writes top-level `notes.md`.
 
-The user-facing document. Schema in `references/notes-schema.md`. Includes:
-
-- TL;DR (the one paragraph a busy reader gets).
-- Decision (what was decided and by whom).
-- Rationale (why, with turn references).
-- Dissent / open questions (what wasn't resolved).
-- Process summary (format, roster, budget, failures).
-- Action items (concrete next steps if the format implies any).
-
-### `<run-dir>/failures.md`
-
-If failures occurred, the moderator already wrote a structured `failures.md`. You don't rewrite it; you reference it from the meeting notes.
+Stage-level `stages/<n>-<name>/verdict.md` files are written by the moderator during the run and are the bindings target for pipelines. You do **not** rewrite them; you stitch their content into `notes.md`'s narrative.
 
 ## Steps
 
 ### 1. Read the run
 
-Load: `agenda.md`, `transcript.jsonl`, `context.md`, `state.json`, all stage verdicts (multi-stage), `failures.md` if present.
+Load: `agenda.md`, `transcript.jsonl`, `context.md`, `state.json`, all stage verdicts, `agents/moderator.md`.
 
 ### 2. Decide the run's disposition
 
 - **Completed cleanly** — terminated by the format's normal termination condition.
 - **Stalled** — user intervention required mid-run.
-- **Aborted** — user explicitly stopped.
+- **Aborted** — user explicitly stopped, or escalation rule triggered (e.g., `auth` error). `state.json.aborted_reason` will name the cause.
 - **Partial** — some stages succeeded, some failed.
 
 Disposition shapes the notes. A stalled run's notes should center the obstacle and the user's options, not pretend a verdict was reached.
 
 ### 3. Extract the structured signal
 
-For every stage, the synthesizer's last turn should have a fenced JSON block per the format's contract. Read it. The structured signal (vote tally, ruling, disposition) is the load-bearing part of the verdict; the prose is around it.
+For every stage, the synthesizer's last turn should have a fenced JSON block per the format's contract. Read it. The structured signal (vote tally, ruling, disposition) is the load-bearing payload of `notes.md`'s `## Structured outcome` section.
 
-### 4. Write `verdict.md`
+For multi-stage runs, the top-level structured outcome summarizes pipeline status and key bindings; per-stage structured outcomes are still inside each stage's `stages/<n>/verdict.md`.
 
-Per `references/verdict-schema.md`. For single-stage: full verdict. For multi-stage: a top-level "what was decided across the pipeline" verdict that references each stage's own verdict file.
+### 4. Compute the failure rollup
 
-### 5. Write `meeting-notes.md`
+Scan `transcript.jsonl` for lines with non-null `error`. If any exist, prepare a short rollup (one bullet per failed turn: `T<turn>` (cli, role): `<error>` after N retries; <outcome>) for the `## Process` section in `notes.md`. If `agents/moderator.md` recorded governance rationale around any of those turns (re-plan, format swap), reference it.
 
-Per `references/notes-schema.md`. The notes are denser and more user-facing than the verdict. They include process commentary the verdict doesn't (failure incidents, time spent, who was the strongest advocate for what).
+### 5. Write `notes.md`
 
-Keep the notes scannable: a busy user reading only the TL;DR and the Decision section should still come away with the right takeaway.
+Per `references/notes-schema.md`. Keep it scannable: a busy user reading only the TL;DR and the Decision section should still come away with the right takeaway.
 
 ### 6. (Optional) emit action items
 
@@ -94,40 +82,35 @@ Don't fabricate action items for formats that don't imply any (a `parliament` re
 
 ### 7. Validate before hand-off
 
-Run a validation loop on the two artifacts you wrote. Do not return to `senate` until each check passes.
+Run a validation loop on `notes.md`. Do not return to `senate` until each check passes.
 
-For `verdict.md`:
-
-- [ ] Every required section in `references/verdict-schema.md` is present and non-empty.
-- [ ] The structured signal (vote / ruling / disposition) matches the synthesis turn's fenced JSON in `transcript.jsonl` — no silent rewrites.
+- [ ] Every required section in `references/notes-schema.md` is present and non-empty.
+- [ ] The `## Structured outcome` JSON matches the synthesis turn's fenced JSON in `transcript.jsonl` — no silent rewrites.
 - [ ] Multi-stage runs: every completed stage's `stages/<N>-<name>/verdict.md` is referenced and the cross-stage decision is consistent with each stage's verdict.
-
-For `meeting-notes.md`:
-
-- [ ] Every required section in `references/notes-schema.md` is present.
 - [ ] Every non-obvious claim has a turn citation (`[T7]`, `[T7,T9]`) and every cited turn exists in `transcript.jsonl`.
 - [ ] Disposition in the TL;DR matches `state.json.status` (completed / stalled / aborted / partial).
-- [ ] If `failures.md` exists, the notes link to it from the process summary.
+- [ ] If any transcript line has an `error`, the failure rollup is present in `## Process`.
 - [ ] Action items, if any, follow from the format's contract — none fabricated for formats that don't imply follow-up work.
 
-If any check fails, fix the artifact and re-run the relevant checks. Repeat until clean. Only then proceed to step 8.
+If any check fails, fix the file and re-run the relevant checks. Repeat until clean. Only then proceed to step 8.
 
 ### 8. Hand off
 
 Return to `senate`:
 
 - One-paragraph summary of the verdict and disposition.
-- Path to `meeting-notes.md` and `verdict.md`.
+- Path to `notes.md`.
 - Anything unexpected (split vote, repeated failures, stalled stage).
 
-`senate` is the one that talks to the user; you produce the artifacts.
+`senate` is the one that talks to the user; you produce the artifact.
 
-## What does NOT belong in meeting notes
+## What does NOT belong in notes
 
 - The raw transcript (it's on disk; link to it).
 - Long quotes from individual turns (cite turn numbers instead: `[T7]`).
 - The full content of `context.md` (it's working memory; the notes are the result).
 - Process pedantry the user doesn't need (which CLI was running which model version is in `agenda.md`).
+- A duplicate of `agents/moderator.md` (cross-reference it; don't paste it).
 
 ## Style
 
@@ -139,10 +122,10 @@ Return to `senate`:
 ## Files in this skill
 
 - `SKILL.md` — this file.
-- `references/verdict-schema.md` — the schema for `verdict.md`.
-- `references/notes-schema.md` — the schema for `meeting-notes.md`.
+- `references/notes-schema.md` — the schema for the merged top-level `notes.md`.
+- `references/verdict-schema.md` — the schema for **stage-level** `stages/<n>-<name>/verdict.md` (written by the moderator; bindings target).
 
 ## Related skills
 
 - `../debate-agenda/` — wrote the plan you're summarizing.
-- `../moderate-debate/` — produced the transcript, context, and per-stage verdicts you're consolidating.
+- `../moderate-debate/` — produced the transcript, context, per-stage verdicts, and `agents/moderator.md` you're consolidating.

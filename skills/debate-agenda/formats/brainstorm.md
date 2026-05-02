@@ -144,12 +144,12 @@ Produce the brainstorm verdict as a markdown document with sections:
 - **Open questions** — what a follow-up brainstorm or decision-format should tackle.
 ```
 
-Output contract: markdown with those four sections.
+Output contract: markdown with those four sections. The facilitator's reply becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
 
 ## Termination
 
 - After phase 4. Brainstorm does not make decisions — it produces options.
-- Common follow-up: feed the top option(s) to a `parliament` or `committee` for a decision.
+- Common follow-up: feed the top option(s) to a `parliament` or `workshop:committee` for a decision.
 
 ## Defaults
 

@@ -61,12 +61,13 @@ Example failed-turn line:
 
 ## Detection code (Bash)
 
-This runs **inside the per-turn subagent**, after the CLI call returns and before contract validation. Use this decision order — first match wins:
+This runs **inside the per-turn subagent**, after the CLI call returns and before contract validation. Use this decision order — first match wins. The `stdout_file` and `stderr_file` arguments are the per-turn paths under `stages/<n>-<name>/turns/<NNN>-<cli>-<role>/{stdout,stderr}.log`:
 
 ```bash
 detect_error() {
   local exit_code="$1" stdout_file="$2" stderr_file="$3"
-  local stderr=$(tail -c 2048 "$stderr_file" | tr '[:upper:]' '[:lower:]')
+  local stderr=""
+  [[ -f "$stderr_file" ]] && stderr=$(tail -c 2048 "$stderr_file" | tr '[:upper:]' '[:lower:]')
   local stdout_len=$(wc -c < "$stdout_file")
 
   # 1. timeout wrapper
@@ -100,24 +101,15 @@ Keep this inline rather than factoring out to a helper script — the whole proj
 
 ## Reporting
 
-At end of run, the moderator writes `failures.md` next to `verdict.md` summarizing any non-empty error codes. If `failures.md` is absent, the run had zero errors.
+Failure facts live exclusively in `transcript.jsonl` — one line per failed turn, with the `error`, `retry_count`, and `stderr_tail` fields populated. There is **no separate `failures.md`** at the top of the run dir; the scribe (`meeting-note`) reads the transcript and surfaces a failure rollup inside `notes.md` if any turns errored.
 
-Example:
-
-```markdown
-# Failures
-
-- **T7** (gemini, rebuttal): rate_limit after 1 retry; continued.
-- **T11** (codex, vote): contract_violation on retry; recorded as abstain.
-```
-
-The `meeting-note` skill reads `failures.md` and surfaces any non-trivial failures in the user-facing summary.
+If governance rationale around a failure is worth preserving (e.g., "two contract_violations from gemini in a row triggered a re-plan callback"), add an entry to `agents/moderator.md` with a `turn:` cross-link — but do not duplicate the failure's facts there.
 
 ## Escalation
 
 These rules are **load-bearing** — the moderator must apply them after recording each failed turn, before dispatching the next per-turn subagent. Skipping them produces infinite-retry loops on broken CLIs.
 
-- **Any `auth` error aborts the entire run.** Do not dispatch a new subagent for the same CLI again. Do not start the next turn even with a different role. **Parallel-phase exception** (per `../SKILL.md` §4a "Parallel + escalation"): when an `auth` error returns from one of several parallel subagents, *await* the rest of the already-dispatched subagents before acting — they are already running and cancelling them buys nothing — then commit every returned result in ascending `turn_id` order (including the auth-error line). After all parallel results are committed: write/update `failures.md` with the auth context, set `state.json` `status: "aborted"` with `aborted_reason: "auth_failure_<cli>"`, then hand back to `senate`. Do not dispatch any further subagents in this run. The user must fix the CLI's auth before any further debate is possible. (Rationale: an unauthenticated CLI cannot recover within a debate run; continuing wastes turns and produces a malformed transcript. Sibling successes from a parallel phase are still part of the run record.)
+- **Any `auth` error aborts the entire run.** Do not dispatch a new subagent for the same CLI again. Do not start the next turn even with a different role. **Parallel-phase exception** (per `../SKILL.md` §4a "Parallel + escalation"): when an `auth` error returns from one of several parallel subagents, *await* the rest of the already-dispatched subagents before acting — they are already running and cancelling them buys nothing — then commit every returned result in ascending `turn_id` order (including the auth-error line). After all parallel results are committed: set `state.json` `status: "aborted"` with `aborted_reason: "auth_failure_<cli>"`, optionally add a one-line entry to `agents/moderator.md` cross-linking the failed turn, then hand back to `senate`. Do not dispatch any further subagents in this run. The user must fix the CLI's auth before any further debate is possible. (Rationale: an unauthenticated CLI cannot recover within a debate run; continuing wastes turns and produces a malformed transcript. Sibling successes from a parallel phase are still part of the run record.)
 - Any `unknown` error terminates the current turn but not the run; moderator continues with fallback.
 - Two or more `refusal` errors from the same CLI in one run: surface to user after the verdict — "this model may not be suitable for this task".
 - Three or more `contract_violation` errors from the same CLI in one run: call back to `../../debate-agenda/` for a re-plan; the planner may swap the CLI for the remaining stages.

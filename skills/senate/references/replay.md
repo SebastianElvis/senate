@@ -29,7 +29,7 @@ Replayed runs live alongside the original:
   2026-04-20-1432-parliament.replay.2/
 ```
 
-The replay directory contains its own `agenda.md` (a copy with override entries in the `## Revisions` log), `transcript.jsonl`, `verdict.md`, `meeting-notes.md`, and a `replay_manifest.json` recording the parent run and what was changed.
+The replay directory contains its own `agenda.md` (a copy with override entries in the `## Revisions` log), `transcript.jsonl`, `notes.md`, per-stage `verdict.md`s, and a `replay_manifest.json` recording the parent run and what was changed. The same layout contract from `workspace.md` applies.
 
 ## `replay_manifest.json`
 
@@ -68,7 +68,7 @@ When the user says *"replay run X, swapping role R to CLI C"*:
 
 ## What does NOT require replay
 
-- Re-reading `verdict.md` from a past run.
+- Re-reading `notes.md` (or any `stages/<n>/verdict.md`) from a past run.
 - Resuming a paused run from a checkpoint — that's resume, not replay (handled by `../../moderate-debate/references/checkpoints.md`).
 - Running the same format on a fresh task — that's just a new run.
 

@@ -1,6 +1,6 @@
 ---
 name: senate
-description: Top-level orchestrator for multi-agent debates between coding CLIs (codex, gemini, cursor, kimi, claude). Routes a request through three sub-skills — debate-agenda (plan), moderate-debate (run), meeting-note (consolidate) — and returns a verdict and meeting notes. Use this skill when the user wants a debate, second opinion, adversarial review, or cross-model consensus on a non-trivial question — even if they don't say "debate" — and especially when they say "debate", "parliament", "court", "consensus", "senate", "have X and Y argue", or "ask multiple models".
+description: Top-level orchestrator for multi-agent debates between coding CLIs (codex, gemini, cursor, kimi, claude). Routes a request through three sub-skills — debate-agenda (plan), moderate-debate (run), meeting-note (consolidate) — and returns a single user-facing notes.md summary. Use this skill when the user wants a debate, second opinion, adversarial review, or cross-model consensus on a non-trivial question — even if they don't say "debate" — and especially when they say "debate", "parliament", "court", "consensus", "senate", "have X and Y argue", or "ask multiple models".
 license: MIT
 ---
 
@@ -13,7 +13,7 @@ Glossary (used throughout this skill bundle, single canonical meaning):
 - **Orchestrator** — the `senate` skill (this file): top-level lifecycle conductor.
 - **Planner** — the `debate-agenda` skill: produces `agenda.md`.
 - **Moderator** — the `moderate-debate` skill: runs turns from the agenda.
-- **Scribe** — the `meeting-note` skill: writes `verdict.md` + `meeting-notes.md`.
+- **Scribe** — the `meeting-note` skill: writes the merged user-facing `notes.md`.
 - **Synthesizer** — the in-format role (speaker / judge / editor / arbiter / synthesizer) that produces a single stage's synthesis content. Distinct from the scribe.
 - **Format** — a primitive debate playbook in `../debate-agenda/formats/`.
 - **Primitive** — a single-stage format (parliament, court, panel, workshop, brainstorm).
@@ -26,7 +26,7 @@ Glossary (used throughout this skill bundle, single canonical meaning):
 senate
   → debate-agenda     (optional)   — plan: pick format, pick roster, sequence stages, ask if needed
   → moderate-debate                 — run: dispatch per-turn subagents, manage context, handle failures
-  → meeting-note                    — consolidate: write verdict.md and meeting-notes.md
+  → meeting-note                    — consolidate: write notes.md (single user-facing summary)
 ```
 
 ## When to trigger
@@ -73,14 +73,14 @@ Invoke `../moderate-debate/`. It reads `agenda.md` and runs the debate to comple
 
 ### 4. Consolidate the result
 
-When the moderator returns `status: completed` (or `stalled` / `aborted` with whatever was produced), invoke `../meeting-note/`. It writes `verdict.md` and `meeting-notes.md`.
+When the moderator returns `status: completed` (or `stalled` / `aborted` with whatever was produced), invoke `../meeting-note/`. It writes the single user-facing `notes.md`.
 
 ### 5. Report back
 
 Return to the user:
 
 - A 2–4 sentence summary of what was decided.
-- Path to `meeting-notes.md` and `verdict.md`.
+- Path to `notes.md`.
 - Any anomaly worth surfacing (split vote, repeated failures, stalled stage).
 
 Do **not** dump the full transcript into the chat — it's on disk, linkable.
@@ -126,7 +126,7 @@ Load each reference **only** when its condition fires:
 
 - `../debate-agenda/` — plan: format selection, roster, stage sequencing, composition, branching. Also hosts the format library at `../debate-agenda/formats/`.
 - `../moderate-debate/` — run: prompt construction, per-turn subagent dispatch, transcript/context commits, failures, budget, checkpoints.
-- `../meeting-note/` — consolidate: verdict.md and meeting-notes.md.
+- `../meeting-note/` — consolidate: write the merged user-facing `notes.md`.
 
 ## Primitives
 

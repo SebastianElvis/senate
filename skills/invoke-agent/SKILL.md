@@ -41,7 +41,7 @@ Every CLI playbook follows the same schema so you can read them interchangeably:
   <prompt body>
   PROMPT
   ```
-- **Capture stdout to a log file** under `.senate/runs/<id>/agents/<cli>.<turn>.log`. Always create this file even if stdout is empty — the moderator records `log_path` on the transcript line and that path must resolve. Redirect stderr to a sibling `<cli>.<turn>.stderr`; delete the `.stderr` if it ends up empty (`[ -s file ] || rm -f file`). Never delete the `.log`.
+- **Capture stdout and stderr to the per-turn directory** at `.senate/runs/<id>/stages/<n>-<name>/turns/<NNN>-<cli>-<role>/{stdout,stderr}.log` (the moderator mints this directory before dispatching the per-turn subagent; `<NNN>` is the monotonic turn number from `transcript.jsonl`). **Always keep `stdout.log`**, even if empty on a hard failure — the workspace contract uses it as the stable raw-output slot, and the moderator records its path on the transcript line. Delete `stderr.log` only when it ends up empty (`[ -s "$TURN_DIR/stderr.log" ] || rm -f "$TURN_DIR/stderr.log"`).
 - **Read exit code.** Classify failures with `../moderate-debate/references/failures.md`; retry only for that file's retryable cases (`rate_limit`, `timeout`, and the documented exit-0 empty-stdout `unknown` case), sharing the same single `r1` retry budget as contract re-prompts.
 - **Strip ANSI.** Pipe through `sed 's/\x1b\[[0-9;]*m//g'` if the CLI emits color codes even when stdout is a pipe.
 - **Timeout.** Wrap every invocation with the portable timeout command defined in `../moderate-debate/references/budget.md` (use GNU `timeout` when available, `gtimeout` on Homebrew/Coreutils macOS installs, otherwise the Perl fallback). Do not assume bare `timeout` exists on macOS.

@@ -14,7 +14,7 @@ User resumes via the host: *"Resume run `<run-id>`"*. Senate's resume procedure:
 
 1. Read `state.json`. Validate the agenda still parses against `../../debate-agenda/references/agenda-schema.md`.
 2. Verify the agenda's frontmatter SHA still matches what was recorded at pause. If the agenda file has been edited since pause, warn the user; offer continue-with-current-agenda or abort.
-3. Re-read all completed stages' `verdict.md` files (they may have been edited by the user during a `revise`).
+3. Re-read all completed stages' `stages/<n>/verdict.md` files (they may have been edited by the user during a `revise`).
 4. Re-extract bindings into `bindings.json`.
 5. Hand off to `../../moderate-debate/` with the run dir. The moderator handles the actual continuation.
 
@@ -50,7 +50,7 @@ For actual scheduling, pair with the host agent's scheduling capabilities (e.g.,
 
 For runs that span days:
 
-- **Verdicts must be self-contained.** Someone reading `verdict.md` a week later should not need to reconstruct context from memory.
+- **Verdicts must be self-contained.** Someone reading `notes.md` (or any `stages/<n>/verdict.md`) a week later should not need to reconstruct context from memory.
 - **Transcripts are canonical.** If bindings are ambiguous later, re-extract from the transcript rather than relying on summaries.
 - **Model versions drift.** A run started on 2026-04-20 may finish on 2026-04-27 with a subtly different model version. The agenda records the CLI + model string for every stage; accept that cross-day runs are not perfectly reproducible.
 - **Shared context grows.** Long-running runs may have a large `context.md` by the time they finish. The auto-summary mechanism in `../../moderate-debate/references/context.md` keeps later turns tractable.

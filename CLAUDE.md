@@ -18,7 +18,7 @@ Five skills compose a debate lifecycle. Reading any one skill in isolation is mi
 senate (orchestrator)
   → debate-agenda  (planner)   — writes agenda.md
   → moderate-debate (moderator) — dispatches per-turn subagents, writes transcript.jsonl
-  → meeting-note   (scribe)    — writes verdict.md + meeting-notes.md
+  → meeting-note   (scribe)    — writes notes.md (single user-facing summary)
 invoke-agent (primitive)       — per-CLI invocation playbooks; read inside per-turn subagents
 ```
 
@@ -35,7 +35,7 @@ Canonical role names (used everywhere — keep them consistent):
 
 ### Run-dir contract (load-bearing)
 
-All runtime state lives at `<cwd>/.senate/runs/<id>/` — **never** inside the skill repo. The skill directory is read-only at runtime. Files: `agenda.md`, `context.md` (shared scratchpad), `agents/<cli>.md` (per-CLI private memory), `agents/<cli>.<turn>.log` / `.stderr` (raw CLI artifacts written by per-turn subagents), `transcript.jsonl`, `verdict.md`, `meeting-notes.md`, `state.json`, optional `stages/<N>-<name>/` for pipelines, optional `failures.md`. The schema is normative — all five skills read/write against it. See `skills/senate/references/workspace.md`.
+All runtime state lives at `<cwd>/.senate/runs/<id>/` — **never** inside the skill repo. The skill directory is read-only at runtime. Top-level files: `agenda.md`, `context.md` (shared scratchpad, delta-only), `transcript.jsonl` (canonical per-turn record; failure facts live here as per-turn `error` codes), `state.json`, `notes.md` (single user-facing summary, replaces the old verdict.md+meeting-notes.md pair), `bindings.json` (multi-stage only). Subdirectories: `agents/` holds per-CLI private memory (`<cli>.md`) and `agents/moderator.md` (governance log) — identity and durable memory only, no per-turn artifacts. `stages/<n>-<name>/` is always present (single-stage runs get `stages/1-<format>/`) and contains the stage's `verdict.md` (bindings target for pipelines) plus `turns/<NNN>-<cli>-<role>/` per-turn directories with `prompt.derived.md`, `stdout.log` (always present, possibly empty on failure), `stderr.log` (only if non-empty), and `reply.md` — all written by the per-turn subagent dispatched by the moderator. Sub-debates embed under the triggering turn at `stages/<n>/turns/<NNN>-compose-<role>/sub/`, never as a top-level peer. The schema is normative — all five skills read/write against it. See `skills/senate/references/workspace.md`.
 
 ### Cross-skill references
 

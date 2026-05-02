@@ -38,9 +38,9 @@ Placeholders:
 ## Output
 
 - Plain text to stdout.
-- Request JSON explicitly in-prompt when needed. Kimi tends to honor fenced-block contracts well — extract with:
+- Request JSON explicitly in-prompt when needed. Kimi tends to honor fenced-block contracts well — extract from the captured per-turn `stdout.log`:
   ```bash
-  awk '/^```json/{flag=1;next}/^```/{flag=0}flag' < reply.log | jq .
+  awk '/^```json/{flag=1;next}/^```/{flag=0}flag' < "$TURN_DIR/stdout.log" | jq .
   ```
 
 ## Budget flags
