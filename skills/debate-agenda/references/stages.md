@@ -38,7 +38,8 @@ A binding is extracted from one of:
 stages:
   - index: 1
     name: draft
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: claude }
       - { role: editor, cli: claude }
@@ -47,7 +48,8 @@ stages:
 
   - index: 2
     name: review
-    format: rfc
+    format: panel
+    preset: rfc
     roster:
       - { role: author, cli: claude }
       - { role: commenter, cli: codex }
@@ -61,7 +63,8 @@ stages:
 
   - index: 3
     name: synthesize
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: claude }
       - { role: editor, cli: claude }
@@ -95,32 +98,32 @@ The `## Why this format` and `## Why this roster` paragraphs from the agenda bod
 ### Explore → decide
 
 ```
-1. oracle (explore the terrain)
+1. panel:oracle (explore the terrain)
 2. parliament (vote on a direction informed by the oracle's synthesis)
 ```
 
 ### Draft → review → finalize
 
 ```
-1. committee (draft)
-2. peer-review or rfc (review)
-3. committee (synthesize)
+1. workshop:committee (draft)
+2. panel:peer-review or panel:rfc (review)
+3. workshop:committee (synthesize)
 ```
 
 ### Investigate → diagnose → remediate
 
 ```
-1. oracle (timeline reconstruction)
-2. red-team (find root causes)
-3. committee (write remediations)
+1. panel:oracle (timeline reconstruction)
+2. court:red-team (find root causes)
+3. workshop:committee (write remediations)
 ```
 
 ### Design → critique → revise
 
 ```
-1. consensus (converge on a design)
-2. red-team (attack it)
-3. consensus (revise informed by the attacks)
+1. workshop:consensus (converge on a design)
+2. court:red-team (attack it)
+3. workshop:consensus (revise informed by the attacks)
 ```
 
 See `../formats/<name>.md` (the pipeline-flavor entries: `rfc-pipeline`, `design-review`, `bill-to-law`, `incident-post-mortem`) for fully fleshed-out templates.
@@ -129,8 +132,8 @@ See `../formats/<name>.md` (the pipeline-flavor entries: `rfc-pipeline`, `design
 
 When the moderator calls `debate-agenda` mid-run for a re-plan (a stage failed, the user changed direction, a checkpoint rejected), the planner may:
 
-- **Insert** a stage (e.g., add a `committee` stage to synthesize a stalled `rfc`).
-- **Delete** a remaining stage (e.g., user decided not to publish, drop the final `committee`).
+- **Insert** a stage (e.g., add a `workshop:committee` stage to synthesize a stalled `panel:rfc`).
+- **Delete** a remaining stage (e.g., user decided not to publish, drop the final `workshop:committee`).
 - **Modify** a roster (e.g., replace a CLI that kept refusing).
 
 Every re-plan appends a `## Revisions` entry. Stages that have already completed are immutable.

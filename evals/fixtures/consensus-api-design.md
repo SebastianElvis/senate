@@ -1,6 +1,7 @@
 ---
 fixture_id: consensus-api-design
-format: consensus
+format: workshop
+preset: consensus
 roster:
   - {role: contributor, cli: codex}
   - {role: contributor, cli: gemini}

@@ -27,7 +27,8 @@ Declare a branch as a stage with a `branches` array:
   parallel: true
   branches:
     - name: security
-      format: red-team
+      format: court
+      preset: red-team
       roster:
         - { role: attacker, cli: codex }
         - { role: attacker, cli: kimi }
@@ -39,7 +40,8 @@ Declare a branch as a stage with a `branches` array:
         - { name: security_ruling, source: "fenced-json.ruling" }
 
     - name: perf
-      format: oracle
+      format: panel
+      preset: oracle
       roster:
         - { role: questioner, cli: claude }
         - { role: expert, cli: codex }
@@ -77,16 +79,17 @@ The next stage usually needs to **combine** the parallel verdicts. Two common id
 
 ### Pass all bindings downstream
 
-The next stage's prompt includes each branch's verdict as a separate binding. Let the next stage's format (often `committee` or `parliament`) reason about them.
+The next stage's prompt includes each branch's verdict as a separate binding. Let the next stage's format (often `workshop` with preset `committee`, or `parliament`) reason about them.
 
 ### Insert a trivial collapse stage
 
-Insert a single-member `committee` between the branch and the next substantive stage. Stage indices are integers (per `agenda-schema.md`), so renumber the remaining stages rather than using a decimal index:
+Insert a single-member `workshop` stage with preset `committee` between the branch and the next substantive stage. Stage indices are integers (per `agenda-schema.md`), so renumber the remaining stages rather than using a decimal index:
 
 ```yaml
 - index: 3
   name: synthesize-reviews
-  format: committee
+  format: workshop
+  preset: committee
   roster:
     - { role: member, cli: claude }
     - { role: editor, cli: claude }

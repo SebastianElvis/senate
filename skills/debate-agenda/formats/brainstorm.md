@@ -1,10 +1,27 @@
 # brainstorm
 
+## Defining commitment
+
+**Divergent generation under a strict no-criticism rule, then convergent selection.** Output is **options, not decisions** — feature ideation, naming, API shape exploration, research directions. The no-criticism rule in the divergent phase is structural: critical feedback during divergence collapses diversity and leaves you with the most defensible idea, not the best idea.
+
+## Boundary conditions
+
+- Phase 1 is criticism-free. The moderator re-prompts once if any phase-1 reply contains critique language.
+- At least 2 generators + facilitator. Generators produce; facilitator clusters and selects.
+- Output is a set of developed options + recommended next steps, not a ruling, not a vote, not a deliverable.
+
+## Anti-drift fence
+
+| If the task is… | The right primitive is… |
+| --- | --- |
+| "Pick one of these options" | parliament (vote) or court (rule) |
+| "Co-author a shared draft" | workshop |
+| "Independent panel critiques" | panel |
+| "Find what's wrong with this proposal" | court (preset: red-team) |
+
 ## Summary
 
-Diverge aggressively, then converge. Three phases: everyone generates freely with no critique allowed; ideas are clustered and ranked; top-k ideas are developed in depth. Best for early-stage exploration where the goal is **optionality, not decision** — feature ideation, naming, API shape exploration, research directions.
-
-The defining rule: **no criticism in phase 1**. Critical feedback in the divergent phase collapses diversity and leaves you with the most defensible idea, not the best idea.
+Three phases: everyone generates freely with no critique allowed; ideas are clustered and ranked; top-k ideas are developed in depth. Common follow-up: feed the top option(s) to a `parliament` or `workshop:committee` for a decision.
 
 ## Roles
 

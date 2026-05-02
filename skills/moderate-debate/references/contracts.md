@@ -71,7 +71,7 @@ These are reused across formats. Formats may define format-specific contracts in
 
 ### `vote`
 
-Used by parliament, red-team judgment, oracle final tally.
+Used by parliament and workshop (preset: committee) closure votes.
 
 Schema:
 
@@ -93,7 +93,7 @@ Fallback on double-failure: `abstain` with `confidence: 0` and the raw reply pre
 
 ### `refine`
 
-Used by consensus refine phase, rfc revision.
+Used by workshop (preset: consensus) refine phase.
 
 Schema:
 
@@ -109,7 +109,7 @@ Fallback on double-failure: treat as `{"changed": false, "confidence": 0.0, "rem
 
 ### `ruling`
 
-Used by court, appeals-court, peer-review editor.
+Used by court (presets: court, appeals-court). Other presets define their own verdict contracts inline.
 
 Schema:
 

@@ -26,7 +26,8 @@ In the agenda's `composition` array on a stage:
 ```yaml
 composition:
   - role: jury
-    format: consensus
+    format: workshop
+    preset: consensus
     roster:
       - { role: contributor, cli: codex }
       - { role: contributor, cli: gemini }
@@ -94,9 +95,9 @@ These are not separate format files — they are recipes the planner recognizes 
 
 | Recipe | Parent format | Composed role | Child format |
 | --- | --- | --- | --- |
-| `court-with-jury-consensus` | court | `judge` → `jury` (panel) | consensus (3 contributors + arbiter) |
-| `parliament-with-committee-parties` | parliament | each `mp_*` | committee (3 members + editor) |
-| `oracle-with-consensus-synthesis` | oracle | `synthesizer` | consensus (2 contributors + arbiter) |
+| `court-with-jury-consensus` | court (preset: court) | `judge` → `jury` | workshop (preset: consensus, 3 contributors + arbiter) |
+| `parliament-with-committee-parties` | parliament | each `mp_*` | workshop (preset: committee, 3 members + editor) |
+| `oracle-with-consensus-synthesis` | panel (preset: oracle) | `synthesizer` | workshop (preset: consensus, 2 contributors + arbiter) |
 
 If the user asks for a recipe by name, expand it into the agenda's `composition` array per the table.
 
