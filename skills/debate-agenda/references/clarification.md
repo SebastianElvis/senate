@@ -8,9 +8,9 @@ Ask only when the answer **materially changes the agenda**.
 
 - **Task is genuinely vague.** "Help me think about X" with no artifact or decision attached → ask what the deliverable is (a decision, a doc, a list of options).
 - **Two interleaved questions.** "Should we migrate to Rust, and if so, what's the migration plan?" → ask which one first; offer to make it a two-stage agenda.
-- **Single vs. multi-stage ambiguous.** "Run an RFC on this design" — could be a single `panel:rfc` debate or the full `rfc-pipeline` recipe (multi-stage). Ask which.
-- **Composition gestured at but not pinned.** "I want a debate where the jury is multiple agents" — ask for the child format/preset (`workshop:consensus`? `workshop:committee`?) and child roster.
-- **Roster missing for ≥4-role formats.** Single 3-CLI default works for most formats; for `panel:rfc`, `workshop:committee` with editor, or composed roles, ask if the user has a preferred roster.
+- **Single vs. multi-stage ambiguous.** "Run a peer review on this design" — could be a single `peer-review` debate or the full `draft-review-finalize` recipe (multi-stage). Ask which.
+- **Composition gestured at but not pinned.** "I want a debate where the jury is multiple agents" — ask for the child format (`committee`? `peer-review`?) and child roster.
+- **Roster missing for ≥4-role formats.** Single 3-CLI default works for most formats; for `peer-review`, `committee` with editor, or composed roles, ask if the user has a preferred roster.
 
 ## Don't ask when
 
@@ -42,7 +42,7 @@ Good:
 
 > Default roster is codex / gemini / claude. Want to swap any of those out, or add kimi / cursor for more breadth?
 
-> The jury could be a single CLI or a small consensus debate. Which?
+> The jury could be a single CLI or a small committee debate. Which?
 
 Bad:
 

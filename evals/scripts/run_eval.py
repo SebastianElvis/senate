@@ -91,7 +91,6 @@ def extract_task(body: str) -> str:
 def build_orchestrator_prompt(fm: dict, task: str, *, skill_root: Path | None = None,
                               force_roster_cli: str | None = None) -> str:
     fmt = fm.get("format")
-    preset = fm.get("preset")
     roster = fm.get("roster", [])
     if force_roster_cli:
         roster = [
@@ -102,7 +101,6 @@ def build_orchestrator_prompt(fm: dict, task: str, *, skill_root: Path | None = 
         f"  - {r['role']}: {r['cli']}" for r in roster
     )
     rounds = fm.get("rounds") or fm.get("max_rounds") or 2
-    preset_line = f"- Preset: {preset}\n" if preset else ""
     skill_note = ""
     if skill_root:
         skill_note = f"""
@@ -116,7 +114,6 @@ Read `{skill_root / "skills" / "senate" / "SKILL.md"}` and follow the referenced
 
 Use these settings (the user has already chosen them; do not re-plan):
 - Format: {fmt}
-{preset_line}\
 - Roster (role: cli):
 {roster_lines}
 - Rounds: {rounds}

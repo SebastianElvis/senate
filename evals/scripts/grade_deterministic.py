@@ -451,11 +451,12 @@ def apply_assertion(rule: dict, run_dir: Path, default_target: str) -> tuple[boo
 def _default_assertion_target(run_dir: Path, fm: dict) -> str:
     """Pick the natural default target for fixture assertions.
 
-    Fixtures encode format-shape expectations (parliament's Rationale, consensus's
-    Artifact, etc.) — these sections live in the stage verdict, not the merged
-    top-level notes.md. Find the first existing stages/<n>-<name>/verdict.md
-    and use it; if none exists (run never wrote a stage verdict), fall back to
-    notes.md so the rule still gets evaluated against something.
+    Fixtures encode format-shape expectations (parliament's Rationale,
+    red-team's Strongest attacks, etc.) — these sections live in the stage
+    verdict, not the merged top-level notes.md. Find the first existing
+    stages/<n>-<name>/verdict.md and use it; if none exists (run never wrote a
+    stage verdict), fall back to notes.md so the rule still gets evaluated
+    against something.
     """
     stages_dir = run_dir / "stages"
     if stages_dir.is_dir():

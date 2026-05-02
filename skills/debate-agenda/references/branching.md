@@ -27,8 +27,7 @@ Declare a branch as a stage with a `branches` array:
   parallel: true
   branches:
     - name: security
-      format: court
-      preset: red-team
+      format: red-team
       roster:
         - { role: attacker, cli: codex }
         - { role: attacker, cli: kimi }
@@ -39,17 +38,17 @@ Declare a branch as a stage with a `branches` array:
         - { name: security_verdict, source: "verdict.md body" }
         - { name: security_ruling, source: "fenced-json.ruling" }
 
-    - name: perf
-      format: panel
-      preset: oracle
+    - name: peer-review
+      format: peer-review
       roster:
-        - { role: questioner, cli: claude }
-        - { role: expert, cli: codex }
-        - { role: expert, cli: gemini }
-        - { role: synthesizer, cli: kimi }
+        - { role: author, cli: claude }
+        - { role: reviewer, cli: codex }
+        - { role: reviewer, cli: gemini }
+        - { role: editor, cli: kimi }
       input_bindings: [draft_doc]
       output_bindings:
-        - { name: perf_verdict, source: "verdict.md body" }
+        - { name: pr_verdict, source: "verdict.md body" }
+        - { name: pr_decision, source: "fenced-json.decision" }
   merge_policy: wait_all
 ```
 
@@ -79,21 +78,20 @@ The next stage usually needs to **combine** the parallel verdicts. Two common id
 
 ### Pass all bindings downstream
 
-The next stage's prompt includes each branch's verdict as a separate binding. Let the next stage's format (often `workshop` with preset `committee`, or `parliament`) reason about them.
+The next stage's prompt includes each branch's verdict as a separate binding. Let the next stage's format (often `committee` or `parliament`) reason about them.
 
 ### Insert a trivial collapse stage
 
-Insert a single-member `workshop` stage with preset `committee` between the branch and the next substantive stage. Stage indices are integers (per `agenda-schema.md`), so renumber the remaining stages rather than using a decimal index:
+Insert a single-member `committee` stage between the branch and the next substantive stage. Stage indices are integers (per `agenda-schema.md`), so renumber the remaining stages rather than using a decimal index:
 
 ```yaml
 - index: 3
   name: synthesize-reviews
-  format: workshop
-  preset: committee
+  format: committee
   roster:
     - { role: member, cli: claude }
     - { role: editor, cli: claude }
-  input_bindings: [security_verdict, perf_verdict]
+  input_bindings: [security_verdict, pr_verdict]
   output_bindings:
     - { name: combined_reviews, source: "verdict.md body" }
 ```

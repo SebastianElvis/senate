@@ -1,6 +1,6 @@
 # Composition — roles filled by sub-debates
 
-Most formats assume each role is filled by exactly one CLI. Some tasks benefit from richer roles: a jury composed of multiple agents reaching consensus; a committee member that is itself a mini-panel; an oracle synthesizer that runs a sub-consensus.
+Most formats assume each role is filled by exactly one CLI. Some tasks benefit from richer roles: a judge informed by a sub-debate, a committee member that is itself a mini-committee, an editor whose synthesis is itself produced by a sub-committee.
 
 This file is how the planner expresses composition. The agenda may declare that a role is filled not by a single CLI but by a **sub-debate** whose verdict becomes that role's contribution.
 
@@ -11,8 +11,8 @@ This used to live in the `invoke-format` skill. It is now part of agenda plannin
 Good reasons:
 
 - **A role is high-stakes** and a single CLI's output is too brittle (e.g., the judge in a court).
-- **Domain breadth required** in a single role (e.g., the synthesizer of an oracle, where you want consensus across several models).
-- **Robustness via ensemble**: compute the role's output as a small consensus rather than one shot.
+- **Domain breadth required** in a single role (e.g., the editor of a committee, where you want multiple models' synthesis to converge).
+- **Robustness via ensemble**: compute the role's output as a small sub-debate rather than one shot.
 
 Bad reasons:
 
@@ -25,19 +25,18 @@ In the agenda's `composition` array on a stage:
 
 ```yaml
 composition:
-  - role: jury
-    format: workshop
-    preset: consensus
+  - role: judge
+    format: committee
     roster:
-      - { role: contributor, cli: codex }
-      - { role: contributor, cli: gemini }
-      - { role: contributor, cli: kimi }
-      - { role: arbiter, cli: claude }
+      - { role: member, cli: codex }
+      - { role: member, cli: gemini }
+      - { role: member, cli: kimi }
+      - { role: editor, cli: claude }
     rounds: 2
     budget_multiplier: 0.4
 ```
 
-The parent stage's `roster` does **not** list the composed role with a `cli` field; instead, the role appears in `composition` with its own format and roster.
+The parent stage's `roster` does **not** list the composed role with a `cli` field; instead, the role appears in `composition` with its own format and roster. The `role:` field above must match a role the parent format defines (`judge` exists in `court.md`); otherwise the agenda fails the validation in `agenda-schema.md` § "Validation".
 
 The `budget_multiplier` is a fraction of the parent stage's remaining budget that this sub-debate may consume (defaults: 0.4 for wall-clock, 0.3 for tokens — see `../../moderate-debate/references/budget.md`).
 
@@ -76,13 +75,13 @@ When the parent stage reaches a turn for a composed role:
    {
      "turn": 3,
      "stage": 1,
-     "role": "jury",
-     "cli": "compose:consensus",
+     "role": "judge",
+     "cli": "compose:committee",
      "ts": "2026-04-27T15:02:11Z",
      "prompt": "...full composed-role prompt...",
      "prompt_sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
      "exit_code": 0,
-     "sub_run_id": "stages/1-court/turns/003-compose-jury/sub/",
+     "sub_run_id": "stages/1-court/turns/003-compose-judge/sub/",
      "text": "{child verdict text}",
      "error": null,
      "retry_count": 0,
@@ -116,9 +115,9 @@ These are not separate format files — they are recipes the planner recognizes 
 
 | Recipe | Parent format | Composed role | Child format |
 | --- | --- | --- | --- |
-| `court-with-jury-consensus` | court (preset: court) | `judge` → `jury` | workshop (preset: consensus, 3 contributors + arbiter) |
-| `parliament-with-committee-parties` | parliament | each `mp_*` | workshop (preset: committee, 3 members + editor) |
-| `oracle-with-consensus-synthesis` | panel (preset: oracle) | `synthesizer` | workshop (preset: consensus, 2 contributors + arbiter) |
+| `court-with-committee-judge` | court | `judge` (filled by sub-committee) | committee (3 members + editor) |
+| `parliament-with-committee-parties` | parliament | each `mp_*` | committee (3 members + editor) |
+| `peer-review-with-committee-editor` | peer-review | `editor` | committee (3 members + editor) |
 
 If the user asks for a recipe by name, expand it into the agenda's `composition` array per the table.
 

@@ -2,7 +2,7 @@
 
 ![The Senate — multi-agent debate between coding CLIs](assets/banner.png)
 
-Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats — parliament, court, panel, workshop, brainstorm — to reach more robust answers than any single model.
+Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats — parliament, court, red-team, peer-review, committee, brainstorm — to reach more robust answers than any single model.
 
 ## Background
 
@@ -43,10 +43,10 @@ Ask your host agent for a debate in plain language:
 
 - *"Run a **parliament** between codex, gemini, and kimi on whether to migrate this service to Rust."*
 - *"Hold a **court** debate — codex prosecutes my refactor, claude defends, gemini judges."*
-- *"Drive **consensus** between three models on this API design."*
+- *"**Committee** of three models drafts this API design."*
 - *"**Red-team** this deployment plan."*
 - *"**Peer-review** this design doc."*
-- *"Run an **RFC pipeline** on this spec."* (multi-stage)
+- *"Run a **draft-review-finalize** pipeline on this spec."* (multi-stage)
 - *"Which format should I use?"* (the planner recommends one without running)
 
 Run artifacts land in `<cwd>/.senate/runs/<id>/` — never in this skill repo. End-to-end walk-throughs of the headline cases live in [`examples/`](examples/README.md).
@@ -89,7 +89,7 @@ Five skills compose one debate lifecycle:
 | Skill | Purpose |
 | --- | --- |
 | `senate` | Top-level entry. Mints the run dir; routes through the lifecycle. |
-| `debate-agenda` | Picks the format and roster, sequences pipeline stages, asks for clarification. Hosts primitives at `formats/` and pipelines in `references/stages.md`. |
+| `debate-agenda` | Picks the format and roster, sequences pipeline stages, asks for clarification. Hosts formats at `formats/` and pipelines in `references/stages.md`. |
 | `moderate-debate` | Drives turns by dispatching per-turn subagents; commits transcript/context; handles failures and checkpoints. |
 | `meeting-note` | Reads agenda + transcript + context + verdicts; writes the user-facing `notes.md`. |
 | `invoke-agent` | Per-CLI playbooks (codex, gemini, cursor, kimi, claude) loaded inside per-turn subagents. |
@@ -135,8 +135,8 @@ Scorecard rows record `repo_commit`, `fixture_sha256`, and `claude_cli_version` 
 ## Extending
 
 - **New CLI** — drop `skills/invoke-agent/references/<name>.md` modeled on an existing file.
-- **New primitive format** — add `skills/debate-agenda/formats/<name>.md` *only* when it owns an interaction-contract axis no existing primitive owns; then add a row to `formats/README.md`.
-- **New pipeline** — add a recipe to `skills/debate-agenda/references/stages.md` referencing existing primitives, and a row to `formats/README.md`.
+- **New format** — add `skills/debate-agenda/formats/<name>.md` *only* when it owns an interaction-contract axis no existing format owns; then add a row to `formats/README.md`.
+- **New pipeline** — add a recipe to `skills/debate-agenda/references/stages.md` referencing existing formats, and a row to `formats/README.md`.
 
 No code to write. Markdown all the way down.
 

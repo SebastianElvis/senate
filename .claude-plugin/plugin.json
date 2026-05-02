@@ -1,7 +1,7 @@
 {
   "name": "senate",
   "version": "0.1.0",
-  "description": "Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, panel, workshop, brainstorm) to reach more robust answers than any single model.",
+  "description": "Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, red-team, peer-review, committee, brainstorm) to reach more robust answers than any single model.",
   "author": {
     "name": "SebastianElvis"
   },

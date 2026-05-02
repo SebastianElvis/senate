@@ -24,7 +24,7 @@ If the user already supplied a complete debate spec (format, roster, rounds, sin
 ## Inputs
 
 1. **Task** — the question, artifact, or decision to debate.
-2. **User-supplied hints** — any of: format, roster, rounds, budget, multi-stage intent, composition (e.g., "the jury is itself a consensus").
+2. **User-supplied hints** — any of: format, roster, rounds, budget, multi-stage intent, composition (e.g., "the jury is itself a committee").
 3. **Prior agenda** (optional) — if re-planning mid-run, the previous `agenda.md` plus the current `transcript.jsonl` slice.
 
 ## Steps
@@ -37,13 +37,13 @@ Walk this checklist. Ask **at most one** clarifying question per missing piece, 
 - **Single vs. multi-stage** ambiguous → ask. *"Is this one debate, or a pipeline (e.g., draft → review → vote)?"*
 - **Format unspecified** → don't ask; pick per `references/format-selection.md` and surface the rationale in the agenda.
 - **Roster unspecified** → ask if multi-stage; otherwise default to `codex, gemini, claude` and surface in the agenda.
-- **Composition** (jury-of-consensus, MP-as-committee) → only ask if the user gestured at it ("a jury that's itself a debate") but didn't pin it down.
+- **Composition** (jury-as-committee, MP-as-committee) → only ask if the user gestured at it ("a jury that's itself a debate") but didn't pin it down.
 
 Never ask more than two questions before producing the agenda. If still ambiguous, produce the best-fit agenda and flag uncertainty in the agenda's `## Open questions` section.
 
 ### 2. Pick the format(s)
 
-For a single debate, walk the decision tree in `references/format-selection.md`. For a multi-stage decision, sequence formats per `references/stages.md` (commonly: explore → draft → review → finalize).
+For a single debate, walk the decision tree in `references/format-selection.md`. For a multi-stage decision, sequence formats per `references/stages.md` (commonly: draft → review → finalize).
 
 For composed roles (a role filled by a sub-debate rather than a single CLI), see `references/composition.md`.
 
@@ -59,7 +59,7 @@ For parallel branches (e.g., security review and perf review running concurrentl
 
 ### 5. Set budget and checkpoints
 
-Budget defaults from `../moderate-debate/references/budget.md`. Override per stage if any stage is known-expensive (e.g., a 5-commenter `rfc` stage). Checkpoint defaults: none for autonomous runs; `required` before publication-bound stages. See `../moderate-debate/references/checkpoints.md`.
+Budget defaults from `../moderate-debate/references/budget.md`. Override per stage if any stage is known-expensive (e.g., a 5-reviewer `peer-review` stage). Checkpoint defaults: none for autonomous runs; `required` before publication-bound stages. See `../moderate-debate/references/checkpoints.md`.
 
 ### 6. Write `agenda.md`
 
@@ -88,10 +88,10 @@ Load each file **only** when the trigger condition fires. Loading everything up 
 | `references/agenda-schema.md` | Always, before writing `agenda.md` (step 6). |
 | `references/format-selection.md` | Format is unspecified or ambiguous (step 2). Skip if the user named a format. |
 | `references/stages.md` | Multi-stage agenda — sequencing or binding work (step 4). Skip for single-stage. |
-| `references/composition.md` | A role is filled by a sub-debate ("a jury that's itself a consensus"). Skip otherwise. |
+| `references/composition.md` | A role is filled by a sub-debate ("a jury that's itself a committee"). Skip otherwise. |
 | `references/branching.md` | Two or more sub-pipelines run in parallel before a join. Skip otherwise. |
 | `references/clarification.md` | Step 1 indicates a clarifying question is needed. Skip if the request is already complete. |
-| `formats/<name>.md` | Exactly one primitive per stage: the format file you have chosen. Do not pre-load the whole library. |
+| `formats/<name>.md` | Exactly one format per stage: the format file you have chosen. Do not pre-load the whole library. |
 | `formats/README.md` | Browsing the catalogue when no format clearly fits. Skip once a format is chosen. |
 | `../moderate-debate/references/budget.md` | Step 5, only if a stage needs a non-default budget. |
 | `../moderate-debate/references/checkpoints.md` | Step 5, only if any stage needs a checkpoint. |
@@ -105,7 +105,7 @@ Load each file **only** when the trigger condition fires. Loading everything up 
 - `references/branching.md` — parallel sub-pipelines.
 - `references/clarification.md` — when and how to ask the user.
 - `references/agenda-schema.md` — the on-disk schema for `agenda.md`.
-- `formats/<name>.md` — primitive playbook library. Five single-stage primitives (parliament, court, panel, workshop, brainstorm) — court / panel / workshop are closed families with named presets (e.g., `court:appeals-court`, `panel:oracle`, `workshop:committee`). Multi-stage pipelines (rfc-pipeline, design-review, bill-to-law, incident-post-mortem) are recipes in `references/stages.md`; each stage points to one of these primitive files.
+- `formats/<name>.md` — format playbook library. Six flat single-stage formats (parliament, court, red-team, peer-review, committee, brainstorm). Multi-stage pipelines (draft-review-finalize, design-review, bill-to-law, incident-post-mortem) are recipes in `references/stages.md`; each stage points to one of these format files.
 
 ## Related skills
 

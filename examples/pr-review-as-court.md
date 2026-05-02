@@ -1,16 +1,16 @@
 # Review a PR as a court
 
-The `court` primitive (default `court` preset) is the right fit when a specific change is on the table and you want the strongest case for and against it, ending in a single ruling. Three roles, fixed: prosecution attacks, defense defends, judge rules.
+The `court` format is the right fit when a specific change is on the table and you want the strongest case for and against it, ending in a single ruling. Three roles, fixed: prosecution attacks, defense defends, judge rules.
 
 ## When to pick court (vs. peer-review or red-team)
 
-`court` is one of the five primitive formats; `red-team` is another preset of `court`; `peer-review` is a preset of the `panel` primitive. Pick by interaction shape:
+All three are flat formats in the library. Pick by interaction shape:
 
-- **`court:court`** — *"is this change safe to merge?"* — adversarial, binary outcome, judge ruling.
-- **`panel:peer-review`** — *"give me independent critique on this design doc"* — multiple reviewers, no fixed adversary.
-- **`court:red-team`** — *"find ways this could fail"* — many attackers, no defender; useful before you've committed to the change.
+- **`court`** — *"is this change safe to merge?"* — adversarial, binary outcome, judge ruling.
+- **`peer-review`** — *"give me independent critique on this design doc"* — multiple reviewers, no fixed adversary.
+- **`red-team`** — *"find ways this could fail"* — many attackers, one defender, judge rules; useful before you've committed to the change.
 
-If you already wrote the PR and want to know whether to merge it, the default `court` preset fits. If you want to harden it before opening, the `red-team` preset of `court` fits.
+If you already wrote the PR and want to know whether to merge it, `court` fits. If you want to harden it before opening, `red-team` fits.
 
 ## The situation
 
@@ -70,11 +70,11 @@ A `remand` is a feature, not a failure. It means the debate surfaced a question 
 
 - **Vague task.** *"Review this PR"* gets a generic critique. *"Rule on whether this PR is safe to merge as-is, given current production load"* gets a real ruling. Make the question rulable.
 - **Imbalanced roster.** If both sides are the same model, the prosecution and defense converge — the model agrees with itself. Use different CLIs for prosecution and defense.
-- **Treating the verdict as binding.** It isn't. The verdict is one well-reasoned argument; you still own the merge decision. Use the `court:appeals-court` preset (re-run with a different roster on the prior run's ruling) if you genuinely doubt a ruling.
-- **Re-arguing in chat.** If you disagree with the judge, don't bicker — run a `court:appeals-court` on the run ID. That's what it's for.
+- **Treating the verdict as binding.** It isn't. The verdict is one well-reasoned argument; you still own the merge decision. Get a second opinion by running a fresh `court` with the prior verdict pasted into the task and a different roster.
+- **Re-arguing in chat.** If you disagree with the judge, don't bicker — run a fresh `court` with a new roster and the prior verdict in context. That's the structured path.
 
 ## After the run
 
 - **Merge or fix.** If the ruling is `sustain`, address the objections and re-run (or just open a new court on the revised diff).
 - **Archive.** The run dir is yours; check it in alongside the PR if the decision was contested. Future-you will appreciate the receipt.
-- **Appeals.** *"Get a second opinion on the court verdict in run `<id>`"* triggers the `court:appeals-court` preset, which re-runs with a different roster looking specifically for errors in the original ruling.
+- **Second opinion.** *"Run a fresh court on this PR with a different roster, given the prior ruling in run `<id>`"* — paste the prior verdict into the task. A new judge with new prosecution and defense will revisit the ruling.

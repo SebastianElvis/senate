@@ -20,7 +20,7 @@ Lives at `<run-dir>/stages/<n>-<name>/verdict.md`. Always present (single-stage 
 
 ## Decision
 
-<one paragraph: what was decided in this stage. For voting formats, include the tally. For ruling formats, the ruling. For consensus, the converged plan in 3-5 sentences. For draft-producing formats, the draft (or a path to where it lives).>
+<one paragraph: what was decided in this stage. For voting formats, include the tally. For ruling formats, the ruling. For draft-producing formats (committee, peer-review), the draft or its summary (or a path to where it lives).>
 
 ## Rationale
 
@@ -43,7 +43,7 @@ Lives at `<run-dir>/stages/<n>-<name>/verdict.md`. Always present (single-stage 
 \`\`\`
 ```
 
-The shape is fixed by this schema; format files may add **named subsections** under `## Decision` that downstream stages can target via `verdict.md section <name>` bindings (e.g., `bill-to-law` produces a `## Final RFC` subsection inside `## Decision` to feed the next stage).
+The shape is fixed by this schema; format files may add **named subsections** under `## Decision` that downstream stages can target via `verdict.md section <name>` bindings (e.g., `red-team` produces an `## Outstanding risks` subsection that downstream `committee` stages bind to).
 
 ## Bindings extraction
 
@@ -52,7 +52,7 @@ Pipelines reference this file in their `output_bindings`. Supported source forms
 | Source | Meaning |
 | --- | --- |
 | `verdict.md body` | The full markdown body of this stage's verdict. |
-| `verdict.md section <name>` | A named section (e.g., "Decision", "Rationale", "Final RFC"). |
+| `verdict.md section <name>` | A named section (e.g., "Decision", "Rationale", "Outstanding risks"). |
 | `fenced-json.<field>` | A field from the fenced JSON in `## Structured outcome`. |
 | `transcript.<role>.last` | The last turn's `text` field for a given role (used when synthesis isn't a separate turn). |
 
