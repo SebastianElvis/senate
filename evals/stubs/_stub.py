@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generic CLI stub used by the eval harness in replay mode.
 
-The harness symlinks `claude`, `codex`, `gemini`, `cursor`, `kimi` to this
-file. The stub:
+The harness symlinks `claude`, `codex`, `gemini`, `cursor-agent`, `kimi` to
+this file. The stub:
 
 1. Identifies which CLI it's pretending to be (from argv[0] basename).
 2. Hashes the prompt (read from stdin or --input-file or first positional).
@@ -94,10 +94,13 @@ def replay(record: dict) -> int:
 
 
 def record_mode(cli: str, prompt: str, residual: list[str], record_path: Path) -> int:
-    real = os.environ.get(f"EVALS_REAL_{cli.upper()}")
+    # Hyphens aren't valid in shell-exported env var names, so normalize:
+    # `cursor-agent` -> `EVALS_REAL_CURSOR_AGENT`.
+    env_name = "EVALS_REAL_" + cli.upper().replace("-", "_")
+    real = os.environ.get(env_name)
     if not real:
         sys.stderr.write(
-            f"[stub] EVALS_REAL_{cli.upper()} not set; cannot record\n"
+            f"[stub] {env_name} not set; cannot record\n"
         )
         return 99
     proc = subprocess.run(
@@ -140,10 +143,11 @@ def main() -> int:
     if mode == "record":
         return record_mode(cli, prompt, residual, record_path)
 
+    env_name = "EVALS_REAL_" + cli.upper().replace("-", "_")
     sys.stderr.write(
         f"[stub] no recording for {cli} at {record_path}\n"
         f"[stub] re-run with EVALS_STUB_MODE=record and "
-        f"EVALS_REAL_{cli.upper()}=/path/to/real/{cli} to capture\n"
+        f"{env_name}=/path/to/real/{cli} to capture\n"
     )
     sys.stderr.write(f"[stub] prompt hash: {key}\n")
     sys.stderr.write(f"[stub] prompt[:200]: {prompt[:200]!r}\n")

@@ -54,8 +54,8 @@ Example failed-turn line:
   "retry_count": 1,
   "text": "",
   "stderr_tail": "HTTP 429: quota exceeded",
-  "log_path": "agents/gemini.7.log",
-  "retry_log_path": "agents/gemini.7r1.log"
+  "log_path": "stages/1-parliament/turns/007-gemini-mp_con/stdout.log",
+  "retry_log_path": "stages/1-parliament/turns/007-gemini-mp_con/stdout.r1.log"
 }
 ```
 

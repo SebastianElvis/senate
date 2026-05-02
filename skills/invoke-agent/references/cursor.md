@@ -15,55 +15,64 @@ Install docs: https://cursor.com/docs/cli
 Non-interactive one-shot:
 
 ```bash
-cursor-agent --print --model "{model}" <<'PROMPT'
+cursor-agent --print --trust --model "{model}" <<'PROMPT'
 {prompt}
 PROMPT
 ```
 
-Short form:
+Or with the prompt as a positional argument:
 
 ```bash
-cursor-agent -p -m "{model}" <<'PROMPT'
-{prompt}
-PROMPT
+cursor-agent --print --trust --model "{model}" "{prompt}"
 ```
 
 Placeholders:
 
-- `{model}` — e.g. `auto`, `claude-sonnet-4.5`, `gpt-5`. Accepts any model Cursor supports for the signed-in user.
-- `{prompt}` — full prompt body via stdin.
+- `{model}` — e.g. `auto`, `sonnet-4`, `sonnet-4-thinking`, `gpt-5`. Run `cursor-agent models` to list models available to the signed-in account. Omit `--model` to use the user's default.
+- `{prompt}` — full prompt body via stdin or as the trailing positional argument.
+
+`--trust` is required for headless invocation (otherwise cursor-agent halts with `Workspace Trust Required` before reading the prompt). `--yolo` / `-f` are equivalent but also force-allow tool actions; for pure-reasoner debate turns prefer `--trust` plus `--mode ask`.
 
 ## Input
 
-- `-p`/`--print` reads from stdin and prints the final reply.
+- `-p` / `--print` enables non-interactive mode and prints the final reply to stdout.
+- The prompt may be passed as the trailing positional argument **or** piped on stdin. Both work; stdin is preferred for long prompts.
 - For very long contexts, use a tempfile:
   ```bash
   PROMPT_FILE=$(mktemp)
   cat > "$PROMPT_FILE" <<'PROMPT'
   {prompt}
   PROMPT
-  cursor-agent -p -m "{model}" < "$PROMPT_FILE"
+  cursor-agent --print --trust --model "{model}" < "$PROMPT_FILE"
   ```
+
+Note: there is **no** `-m` short flag for `--model`. Older notes that used `-m` are wrong — Commander parses it as an unknown option and the run fails.
 
 ## Output
 
-- Plain text by default.
-- `--output-format json` gives a structured record with the reply and tool-call trace. Prefer this when parsing:
+- Plain text by default (`--output-format text`).
+- `--output-format json` emits a single JSON record. The reply lives in `.result` (not `.reply`):
   ```bash
-  cursor-agent -p -m "{model}" --output-format json < "$PROMPT_FILE" | jq -r '.reply'
+  cursor-agent --print --trust --model "{model}" --output-format json < "$PROMPT_FILE" | jq -r '.result'
   ```
+  Other useful fields: `.is_error`, `.session_id`, `.usage.{inputTokens,outputTokens,cacheReadTokens}`.
+- `--output-format stream-json` for incremental events; pair with `--stream-partial-output` for token deltas.
 
 ## Budget flags
 
-- No token cap flag as of this writing. Cap via prompt wording and `timeout`.
+- No token cap flag. Cap via prompt wording and the portable timeout wrapper from `../../moderate-debate/references/budget.md`.
+- `--mode plan` and `--mode ask` are read-only (no edits, no shell). Use `--mode ask` for pure-reasoner debate turns to prevent file mutation.
 
 ## Auth
 
-- Signed in via `cursor-agent login`. Uses the user's Cursor subscription — no raw API key env var required.
+- Signed in via `cursor-agent login` (uses the user's Cursor subscription) or `CURSOR_API_KEY` in the environment.
+- `cursor-agent status` / `whoami` shows the active account.
 - If not signed in, stderr says so clearly; do not retry.
 
 ## Known quirks
 
-- `cursor-agent` will attempt to read files and edit them by default when it sees path-like strings. For debate turns, explicitly instruct it: **"Do not edit files. Reply in text only."** Otherwise it may mutate the workspace mid-debate.
-- Tool-calls are logged to stderr. Redirect stderr to a separate file if you want a clean stdout.
+- Without `--trust`, headless runs in any unfamiliar directory exit early with `Workspace Trust Required` and the prompt is never sent. Always include `--trust` in debate invocations.
+- In default mode `cursor-agent` will attempt to read files and edit them when it sees path-like strings. For debate turns, either pass `--mode ask` **or** explicitly instruct: **"Do not edit files or run commands. Reply in text only."**
+- Tool-call diagnostics are written to stderr. Redirect stderr to `stderr.log` separately so `stdout.log` stays clean. Prune `stderr.log` if empty (mirror the codex pattern).
 - The first invocation after a model switch can be slow (cold start); don't set `timeout` below 120s.
+- JSON output uses `result`, not `reply`. Older parsers keyed on `.reply` will silently produce empty strings.

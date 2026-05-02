@@ -40,7 +40,8 @@ evals/
     report.py         # roll up scorecard.jsonl into markdown
   stubs/              # CLI shims for replay-mode harness runs
     _stub.py
-    {claude,codex,gemini,cursor,kimi} -> _stub.py
+    {claude,codex,gemini,cursor-agent,kimi} -> _stub.py
+    # symlink names match the actual binaries the senate skill dispatches
   .evals/             # gitignored; runtime output (scorecard.jsonl, reports)
 ```
 
@@ -98,6 +99,7 @@ For anything more nuanced, use an LLM judge.
 | `consensus-api-design.md` | workshop | consensus | Convergence on artifact |
 | `peer-review-rfc.md` | panel | peer-review | Blind reviewer comments + editor decision |
 | `red-team-auth.md` | court | red-team | Attacker/defender numbered exchanges |
+| `_smoke-cursor-kimi.md` | parliament | — | Tiny smoke for the `cursor` + `kimi` playbooks (not in capability set) |
 
 Capability set today. Once a format hits ≥95% pass@3 across its fixtures (the H1 quality bar from `dev/PRODUCT.md`), we promote those fixtures to a `fixtures/regression/` set.
 
