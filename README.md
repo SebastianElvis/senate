@@ -152,6 +152,8 @@ In your coding agent, ask for a debate in plain language:
 
 Run artifacts land in `<cwd>/.senate/runs/<id>/` — never in this skill repo.
 
+For end-to-end walk-throughs of the most common cases — *Review a PR as a court*, *Design an API by consensus*, *Weigh a migration in parliament* — see [`examples/`](examples/README.md). Each one covers when to pick the format, the prompt to give the orchestrator, the recommended roster, and how to read the verdict.
+
 ## Run-dir layout
 
 Single-stage runs and multi-stage pipelines share the same workspace conventions; multi-stage runs add a `stages/` subdirectory. Full layout in [`skills/senate/references/workspace.md`](skills/senate/references/workspace.md).
