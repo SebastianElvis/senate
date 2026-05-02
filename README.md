@@ -1,5 +1,7 @@
 # senate
 
+![The Senate — multi-agent debate between coding CLIs](assets/banner.png)
+
 Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, panel, workshop, brainstorm) to reach more robust answers than any single model.
 
 ## Install
