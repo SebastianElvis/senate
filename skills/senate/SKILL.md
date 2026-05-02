@@ -1,6 +1,7 @@
 ---
 name: senate
-description: Top-level orchestrator for multi-agent debates between coding CLIs (codex, gemini, cursor, kimi, claude). Routes a request through three sub-skills — debate-agenda (plan), moderate-debate (run), meeting-note (consolidate) — and returns a verdict and meeting notes. Use when the user wants a debate, second opinion, adversarial review, cross-model consensus, or says "debate", "parliament", "court", "consensus", "senate", "have X and Y argue", "ask multiple models".
+description: Top-level orchestrator for multi-agent debates between coding CLIs (codex, gemini, cursor, kimi, claude). Routes a request through three sub-skills — debate-agenda (plan), moderate-debate (run), meeting-note (consolidate) — and returns a verdict and meeting notes. Use this skill when the user wants a debate, second opinion, adversarial review, or cross-model consensus on a non-trivial question — even if they don't say "debate" — and especially when they say "debate", "parliament", "court", "consensus", "senate", "have X and Y argue", or "ask multiple models".
+license: MIT
 ---
 
 # senate — top-level debate orchestrator
@@ -102,6 +103,16 @@ A multi-stage agenda may pause for hours or days at a checkpoint. See `reference
 - **Don't moderate yourself.** Turn-by-turn invocation is `moderate-debate`'s job.
 - **Don't pick a format yourself** unless the request is unambiguous. Defer to `debate-agenda`.
 - **No secrets in prompts.** Strip env vars, tokens, and credentials from anything sent to another CLI.
+
+## Reference loading rules
+
+Load each reference **only** when its condition fires:
+
+| File | Load when |
+| --- | --- |
+| `references/workspace.md` | Step 1 (mint the run dir) and any time you need the canonical `<run-dir>/` layout or `state.json` schema. |
+| `references/replay.md` | The user explicitly asked to replay a past run with a different roster. Never load otherwise. |
+| `references/timeline.md` | A run has been paused at a checkpoint long enough that resumability across sessions matters (hours+), or the user is explicitly resuming a run from a previous session. Skip for routine runs that complete in one sitting. |
 
 ## Files in this skill
 

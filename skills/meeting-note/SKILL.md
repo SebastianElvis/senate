@@ -1,6 +1,7 @@
 ---
 name: meeting-note
-description: Consolidates a finished debate run into user-facing meeting notes — reads the agenda, transcript, shared context, per-stage verdicts (multi-stage), and any failures, and writes the canonical verdict.md plus meeting-notes.md. Use when moderate-debate has finished and the user needs a clean summary of what happened, what was decided, and what to do next.
+description: Consolidates a finished debate run into user-facing meeting notes — reads the agenda, transcript, shared context, per-stage verdicts (multi-stage), and any failures, and writes the canonical verdict.md plus meeting-notes.md. Use this skill when moderate-debate has finished a run and the user needs a clean summary of what happened, what was decided, and what to do next, or when the user asks for "the notes" or "the summary" of a past debate run.
+license: MIT
 ---
 
 # meeting-note — consolidate the run into user-facing notes
@@ -91,7 +92,27 @@ If the debate's format implies follow-up work (a `committee` produced an ADR tha
 
 Don't fabricate action items for formats that don't imply any (a `parliament` resolving an open question doesn't necessarily produce action items).
 
-### 7. Hand off
+### 7. Validate before hand-off
+
+Run a validation loop on the two artifacts you wrote. Do not return to `senate` until each check passes.
+
+For `verdict.md`:
+
+- [ ] Every required section in `references/verdict-schema.md` is present and non-empty.
+- [ ] The structured signal (vote / ruling / disposition) matches the synthesis turn's fenced JSON in `transcript.jsonl` — no silent rewrites.
+- [ ] Multi-stage runs: every completed stage's `stages/<N>-<name>/verdict.md` is referenced and the cross-stage decision is consistent with each stage's verdict.
+
+For `meeting-notes.md`:
+
+- [ ] Every required section in `references/notes-schema.md` is present.
+- [ ] Every non-obvious claim has a turn citation (`[T7]`, `[T7,T9]`) and every cited turn exists in `transcript.jsonl`.
+- [ ] Disposition in the TL;DR matches `state.json.status` (completed / stalled / aborted / partial).
+- [ ] If `failures.md` exists, the notes link to it from the process summary.
+- [ ] Action items, if any, follow from the format's contract — none fabricated for formats that don't imply follow-up work.
+
+If any check fails, fix the artifact and re-run the relevant checks. Repeat until clean. Only then proceed to step 8.
+
+### 8. Hand off
 
 Return to `senate`:
 

@@ -1,6 +1,8 @@
 ---
 name: invoke-agent
-description: Playbook for invoking non-interactive coding-agent CLIs (codex, gemini, cursor, kimi, claude) as subprocesses. Use when moderate-debate needs to run one turn of a debate, or when any skill needs to shell out to another AI CLI with a prompt and capture the reply.
+description: Playbook for invoking non-interactive coding-agent CLIs (codex, gemini, cursor, kimi, claude) as subprocesses. Use this skill when moderate-debate needs to run one turn of a debate, or when any skill needs to shell out to another AI CLI with a prompt and capture the reply — covers install checks, exact non-interactive invocation, input/output conventions, budget flags, and known per-CLI quirks.
+license: MIT
+compatibility: Requires the relevant CLI binaries (codex, gemini, cursor-agent, kimi, claude) on PATH for any participating agent.
 ---
 
 # invoke-agent — CLI invocation playbook
@@ -49,8 +51,14 @@ Copy one of the existing files as a template, fill in the six sections above, an
 
 ## Files in this skill
 
+Per-CLI playbooks (load only the file matching the CLI you're about to invoke this turn):
+
 - `references/codex.md`
 - `references/gemini.md`
 - `references/cursor.md`
 - `references/kimi.md`
 - `references/claude.md`
+
+Cross-cutting reference (load only on demand):
+
+- `references/skill-authoring.md` — Agent Skills spec & best practices. Load **only when** the prompt being sent to a CLI is asking it to author or revise an Agent Skill (otherwise it is dead weight in context).
