@@ -95,7 +95,9 @@ The `meeting-note` skill reads `failures.md` and surfaces any non-trivial failur
 
 ## Escalation
 
-- Any `auth` error terminates the run and reports to the user (nothing else is possible).
+These rules are **load-bearing** — the moderator must apply them after recording each failed turn, before invoking the next CLI. Skipping them produces infinite-retry loops on broken CLIs.
+
+- **Any `auth` error aborts the entire run.** Do not invoke the same CLI again. Do not start the next turn even with a different role. Sequence: write the failed turn line, write/update `failures.md` with the auth context, set `state.json` `status: "aborted"` with `aborted_reason: "auth_failure_<cli>"`, then hand back to `senate`. The user must fix the CLI's auth before any further debate is possible. (Rationale: an unauthenticated CLI cannot recover within a debate run; continuing wastes turns and produces a malformed transcript.)
 - Any `unknown` error terminates the current turn but not the run; moderator continues with fallback.
 - Two or more `refusal` errors from the same CLI in one run: surface to user after the verdict — "this model may not be suitable for this task".
 - Three or more `contract_violation` errors from the same CLI in one run: call back to `../../debate-agenda/` for a re-plan; the planner may swap the CLI for the remaining stages.

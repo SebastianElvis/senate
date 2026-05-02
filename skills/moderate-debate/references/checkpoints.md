@@ -104,7 +104,7 @@ In every case, the moderator (not the planner) is responsible for transitioning 
 
 ## Eval mode
 
-Fixture runs (the `senate-eval` harness) bypass `required` checkpoints with an automatic `continue`. They write to `state.json` as if paused, then immediately resume. This means eval bypasses the primary safety function of checkpoints — which is fine, since eval is measuring process mechanics, not final output correctness.
+Fixture runs (the `evals` harness) bypass `required` checkpoints with an automatic `continue`. They write to `state.json` as if paused, then immediately resume. This means eval bypasses the primary safety function of checkpoints — which is fine, since eval is measuring process mechanics, not final output correctness.
 
 ## Guardrails
 

@@ -96,7 +96,7 @@ senate
 | `meeting-note` | Consolidates the run. Reads agenda + transcript + context + per-stage verdicts; writes `verdict.md` and `meeting-notes.md`. |
 | `invoke-agent` | Per-CLI invocation playbook (codex, gemini, cursor, kimi, claude). Used by `moderate-debate`. |
 
-Each skill follows the [Agent Skills spec](https://agentskills.io/specification): a `SKILL.md` at the root and on-demand documentation under `references/`. The `senate-eval` evaluation harness lives at the workspace root (not under `skills/`) and will be revisited later.
+Each skill follows the [Agent Skills spec](https://agentskills.io/specification): a `SKILL.md` at the root and on-demand documentation under `references/`. The `evals/` directory is a sibling evaluation harness (not a shipped skill) — see [Evaluating](#evaluating) below.
 
 ## Usage
 
@@ -126,6 +126,26 @@ Single-stage runs and multi-stage pipelines share the same workspace conventions
   meeting-notes.md   # user-facing summary (meeting-note writes this)
   state.json         # run status, used for resume
 ```
+
+## Evaluating
+
+`evals/` runs fixture debates end-to-end and grades them on two tiers: deterministic schema/contract checks against the run-dir layout, plus LLM judges (verdict, agenda, meeting-notes, transcript-quality, pairwise) invoked via the Claude CLI. No API key required — the judges use your Claude Code OAuth session.
+
+```bash
+# Run all fixtures (default models: sonnet 4.6 orchestrator, opus 4.7 judge)
+evals/run.sh
+
+# One fixture
+evals/run.sh evals/fixtures/parliament-migration.md
+
+# Smoke test (cheapest, no kimi/gemini dependency)
+evals/run.sh evals/fixtures/_smoke-parliament.md
+
+# Roll up the scorecard
+python3 evals/scripts/report.py
+```
+
+Scorecard rows record `repo_commit`, `fixture_sha256`, and `claude_cli_version` so runs are reproducible. Stub-CLI replay mode is available for fast CI runs (see `evals/SKILL.md`). Methodology follows [Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
 
 ## Adding a format or CLI
 
