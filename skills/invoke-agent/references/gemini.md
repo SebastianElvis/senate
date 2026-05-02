@@ -13,7 +13,7 @@ Install docs: https://geminicli.com/
 Non-interactive one-shot:
 
 ```bash
-gemini --model "{model}" --prompt "$(cat)" <<'PROMPT'
+gemini --skip-trust --model "{model}" --prompt "$(cat)" <<'PROMPT'
 {prompt}
 PROMPT
 ```
@@ -21,7 +21,7 @@ PROMPT
 Or the more common short form:
 
 ```bash
-gemini -m "{model}" -p - <<'PROMPT'
+gemini --skip-trust -m "{model}" -p - <<'PROMPT'
 {prompt}
 PROMPT
 ```
@@ -30,6 +30,8 @@ Placeholders:
 
 - `{model}` — e.g. `gemini-2.5-pro`, `gemini-2.5-flash`. Omit to use the CLI default.
 - `{prompt}` — full prompt body.
+
+`--skip-trust` is required for headless invocation outside a Gemini-trusted folder; otherwise Gemini errors out with "not running in a trusted directory" before reading the prompt. `GEMINI_CLI_TRUST_WORKSPACE=true` in the environment is an equivalent alternative.
 
 ## Input
 
@@ -40,7 +42,7 @@ Placeholders:
   {prompt}
   PROMPT
   )
-  gemini -m "{model}" -p "$PROMPT_BODY"
+  gemini --skip-trust -m "{model}" -p "$PROMPT_BODY"
   ```
 
 ## Output
@@ -61,6 +63,7 @@ Placeholders:
 
 ## Known quirks
 
+- Trust prompt: when launched from a directory that has not been marked trusted (e.g. a fresh `.senate/runs/<id>/` workspace), Gemini exits before reading the prompt with `Gemini CLI is not running in a trusted directory`. The invoke commands above already pass `--skip-trust`; if you see this error, the flag was dropped — re-add it (or export `GEMINI_CLI_TRUST_WORKSPACE=true`).
 - Long prompts occasionally truncate silently. Put the most important instruction (the output contract) at the **end** of the prompt, not the start.
 - Safety-filter refusals return exit code 0 with a short "I can't help with that" reply. Classify per `../../moderate-debate/references/failures.md` — these match the `refusal` detection (exit 0 + short stdout + refusal phrasing), so record `error: "refusal"` and apply the format's fallback. Do not remap to `contract_violation`.
 - Rate limits surface as HTTP 429 in stderr; back off 30s and retry once.
