@@ -80,7 +80,7 @@ Defaults are conservative. A parent cannot spend more than the child consumed (s
 
 ## User-visible reporting
 
-`verdict.md` ends with a short budget line written by `meeting-note`:
+`notes.md` ends with a short budget line written by `meeting-note`:
 
 ```markdown
 ---

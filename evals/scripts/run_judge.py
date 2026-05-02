@@ -5,9 +5,9 @@ Usage:
   run_judge.py --rubric verdict --fixture <path> --run-dir <path> [--model <id>]
   run_judge.py --rubric pairwise --fixture <path> --run-dir-a <path> --run-dir-b <path>
 
-Calls `claude -p --output-format json`. Parses the wrapper response, extracts
-the judge's JSON from `result`, validates against a minimal schema, prints the
-combined record on stdout.
+Calls a non-interactive judge CLI (`claude` by default, or `codex`). Parses the
+judge's JSON, validates against a minimal schema, prints the combined record on
+stdout.
 
 The judge model is pinned via --model (default `claude-opus-4-7`). The model id
 is recorded in the output so scorecard rows are reproducible.
@@ -30,9 +30,9 @@ EVALS_DIR = REPO_ROOT / "evals"
 JUDGES_DIR = EVALS_DIR / "judges"
 
 ARTIFACT_FOR_RUBRIC = {
-    "verdict": ["verdict.md"],
+    "verdict": ["notes.md"],
     "agenda": ["agenda.md"],
-    "meeting_notes": ["verdict.md", "meeting-notes.md"],
+    "meeting_notes": ["notes.md"],
     "transcript_quality": ["transcript.jsonl"],
 }
 
@@ -124,9 +124,9 @@ def build_prompt(rubric: str, fixture: Path, run_dir: Path | None,
     if rubric == "pairwise":
         if not (run_dir_a and run_dir_b):
             raise ValueError("pairwise judge needs --run-dir-a and --run-dir-b")
-        a = (run_dir_a / "verdict.md").read_text()
-        b = (run_dir_b / "verdict.md").read_text()
-        parts += ["# Verdict A", "", a, "", "# Verdict B", "", b, ""]
+        a = (run_dir_a / "notes.md").read_text()
+        b = (run_dir_b / "notes.md").read_text()
+        parts += ["# Notes A", "", a, "", "# Notes B", "", b, ""]
     else:
         artifacts = ARTIFACT_FOR_RUBRIC[rubric]
         for name in artifacts:
@@ -190,12 +190,51 @@ def invoke_claude(prompt: str, model: str, claude_bin: str) -> dict:
     return wrapper
 
 
+def invoke_codex(prompt: str, model: str, codex_bin: str) -> dict:
+    cmd = [
+        codex_bin, "exec",
+        "--model", model,
+        "--sandbox", "danger-full-access",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--json",
+        "--output-last-message", "last-message.txt",
+        "--skip-git-repo-check",
+        "-",
+    ]
+    with tempfile.TemporaryDirectory(prefix="evals-judge-codex-") as tmp:
+        tmp_path = Path(tmp)
+        proc = subprocess.run(
+            cmd, input=prompt, capture_output=True, text=True,
+            timeout=240, cwd=tmp, env=judge_env(),
+        )
+        last_path = tmp_path / "last-message.txt"
+        last = last_path.read_text() if last_path.exists() else ""
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"codex exited {proc.returncode}; stderr={proc.stderr[-400:]}; stdout={proc.stdout[-400:]}"
+        )
+    return {"result": last, "usage": _codex_usage(proc.stdout)}
+
+
+def _codex_usage(events: str) -> dict:
+    usage: dict = {}
+    for line in events.splitlines():
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        if obj.get("type") == "turn.completed" and isinstance(obj.get("usage"), dict):
+            usage = obj["usage"]
+    return usage
+
+
 def extract_judge_json(wrapper: dict) -> dict:
     """Pull the judge's JSON object out of the wrapper's `result` field.
 
-    `claude -p --output-format json` returns {result: "<assistant text>", ...}.
-    The assistant text should be JSON only (we asked for that), but models
-    sometimes wrap it in code fences. Strip those.
+    Claude returns {result: "<assistant text>", ...}; the Codex invoker adapts
+    its last-message file into the same shape. The assistant text should be
+    JSON only (we asked for that), but models sometimes wrap it in code fences.
+    Strip those.
     """
     text = wrapper.get("result")
     if text is None:
@@ -223,9 +262,17 @@ def main() -> int:
     ap.add_argument("--run-dir-a", type=Path)
     ap.add_argument("--run-dir-b", type=Path)
     ap.add_argument("--model", default="claude-opus-4-7")
+    ap.add_argument("--judge-cli", choices=["claude", "codex"], default="claude")
     ap.add_argument("--claude-bin",
                     default=os.environ.get("EVALS_CLAUDE_BIN") or shutil.which("claude") or "claude")
+    ap.add_argument("--codex-bin",
+                    default=os.environ.get("EVALS_CODEX_BIN") or shutil.which("codex") or "codex")
     args = ap.parse_args()
+
+    def invoke(prompt: str) -> dict:
+        if args.judge_cli == "codex":
+            return invoke_codex(prompt, args.model, args.codex_bin)
+        return invoke_claude(prompt, args.model, args.claude_bin)
 
     schema_errors: list[str] = []
     if args.rubric == "pairwise":
@@ -236,8 +283,8 @@ def main() -> int:
                                  args.run_dir_a, args.run_dir_b)
         prompt_ba = build_prompt(args.rubric, args.fixture, args.run_dir,
                                  args.run_dir_b, args.run_dir_a)
-        wrap_ab = invoke_claude(prompt_ab, args.model, args.claude_bin)
-        wrap_ba = invoke_claude(prompt_ba, args.model, args.claude_bin)
+        wrap_ab = invoke(prompt_ab)
+        wrap_ba = invoke(prompt_ba)
         j_ab = extract_judge_json(wrap_ab)
         j_ba = extract_judge_json(wrap_ba)
         # Translate B/A winner back into A/B frame.
@@ -260,7 +307,7 @@ def main() -> int:
     else:
         prompt = build_prompt(args.rubric, args.fixture, args.run_dir,
                               args.run_dir_a, args.run_dir_b)
-        wrapper = invoke_claude(prompt, args.model, args.claude_bin)
+        wrapper = invoke(prompt)
         judgement = extract_judge_json(wrapper)
         schema_errors = validate_judgement(args.rubric, judgement)
         if schema_errors:
@@ -277,6 +324,7 @@ def main() -> int:
         "run_dir_a": str(args.run_dir_a) if args.run_dir_a else None,
         "run_dir_b": str(args.run_dir_b) if args.run_dir_b else None,
         "model": args.model,
+        "judge_cli": args.judge_cli,
         "ts": datetime.now(timezone.utc).isoformat(),
         "judgement": judgement,
         "wrapper_meta": {

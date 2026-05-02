@@ -2,7 +2,7 @@
 
 Three end-to-end walk-throughs of the most common ways to use `senate`. Each one is a complete recipe: the situation, the prompt to give the orchestrator, what shows up on disk, and how to read the result.
 
-Pick the one closest to your problem and read it before running anything — the difference between *"my refactor is safe"* (court), *"design this API"* (consensus), and *"should we migrate?"* (parliament) is the difference between three useful runs and three confused ones.
+Pick the one closest to your problem and read it before running anything — the difference between *"my refactor is safe"* (court), *"design this API"* (workshop:consensus), and *"should we migrate?"* (parliament) is the difference between three useful runs and three confused ones.
 
 | Example | Format · Preset | When to pick this |
 | --- | --- | --- |
@@ -25,13 +25,21 @@ If none of these fits your task, ask the orchestrator *"which format should I us
 Every example produces the same run-dir layout under `<cwd>/.senate/runs/<id>/`:
 
 ```
-agenda.md          # the plan
-context.md         # shared scratchpad
-agents/<cli>.md    # per-CLI private memory
-transcript.jsonl   # append-only per-turn record
-verdict.md         # canonical decision
-meeting-notes.md   # user-facing summary
-state.json         # for resume
+agenda.md                # the plan
+context.md               # shared scratchpad
+transcript.jsonl         # append-only per-turn record (failures live here as `error` codes)
+state.json               # for resume
+notes.md                 # single user-facing summary
+agents/
+  moderator.md           # moderator's governance log
+  <cli>.md               # per-CLI private memory across turns
+stages/<n>-<name>/
+  verdict.md             # synthesis content (bindings target)
+  turns/<NNN>-<cli>-<role>/
+    prompt.derived.md
+    stdout.log          # always present; may be empty on failure
+    stderr.log          # only if non-empty
+    reply.md
 ```
 
-When the orchestrator finishes, it returns a 2–4 sentence summary plus paths to `verdict.md` and `meeting-notes.md`. Read those, not the raw transcript.
+When the orchestrator finishes, it returns a 2–4 sentence summary plus the path to `notes.md`. Read that, not the raw transcript.

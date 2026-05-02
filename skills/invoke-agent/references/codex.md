@@ -43,10 +43,11 @@ rm -f "$PROMPT_FILE"
 
 - Plain text to stdout by default.
 - If you need structured output, ask for a fenced `json` block in the prompt and parse it after.
-- Banner/progress lines may appear on stderr — redirect stderr separately. Always keep the `.log` file, even when stdout is empty, because the moderator records `log_path` and that path must resolve. Prune only an empty `.stderr`:
+- Banner/progress lines may appear on stderr — redirect stderr separately. Always keep `stdout.log` as the stable raw-output slot even when empty, because the moderator records `log_path` on the transcript line and that path must resolve. Prune only an empty `stderr.log`:
   ```bash
-  codex exec ... 2>"$RUN_DIR/agents/codex.1.stderr" >"$RUN_DIR/agents/codex.1.log"
-  [ -s "$RUN_DIR/agents/codex.1.stderr" ] || rm -f "$RUN_DIR/agents/codex.1.stderr"
+  TURN_DIR="$RUN_DIR/stages/1-parliament/turns/001-codex-mp_pro"
+  codex exec ... 2>"$TURN_DIR/stderr.log" >"$TURN_DIR/stdout.log"
+  [ -s "$TURN_DIR/stderr.log" ] || rm -f "$TURN_DIR/stderr.log"
   ```
 
 ## Budget flags

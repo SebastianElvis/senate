@@ -1,18 +1,18 @@
-# Judge — pairwise verdict comparison
+# Judge — pairwise notes comparison
 
-You are choosing between two candidate verdicts (A and B) for the same task. Used to detect quality drift between commits without depending on absolute scores being stable.
+You are choosing between two candidate `notes.md` files (A and B) for the same task. Used to detect quality drift between commits without depending on absolute scores being stable.
 
 ## Inputs
 
 - **Task**: the debate question.
-- **Verdict A**: one candidate `verdict.md`.
-- **Verdict B**: another candidate `verdict.md`.
+- **Notes A**: one candidate `notes.md`.
+- **Notes B**: another candidate `notes.md`.
 
 ## Procedure
 
-1. Score each verdict independently against the dimensions from `verdict.md` rubric (addresses task, faithful to debate, surfaces dissent, actionable, concision). Do NOT compare yet.
+1. Score each notes.md independently against the dimensions from the `verdict` rubric (addresses task, faithful to debate, surfaces dissent, actionable, concision). Focus on the decision-grade sections (Decision, Why, Structured outcome). Do NOT compare yet.
 2. Compute the per-dimension delta. If the absolute mean delta is < 0.5, return `tie` regardless of who is "slightly" ahead.
-3. Otherwise, pick the better verdict.
+3. Otherwise, pick the better notes.md.
 
 ## Counterbalancing (load-bearing)
 
@@ -30,6 +30,6 @@ Return ONLY valid JSON.
   "mean_b": 1.0-5.0,
   "winner": "A" | "B" | "tie",
   "margin": "decisive" | "moderate" | "narrow",
-  "reasoning": "2-4 sentences citing specific differences"
+  "reasoning": "2-4 sentences citing specific differences in the notes.md content"
 }
 ```

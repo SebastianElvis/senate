@@ -4,10 +4,14 @@ A debate's participants need somewhere to share intermediate state that doesn't 
 
 There are two kinds:
 
-- **Shared context** — `context.md`, one per run. Free-form. Every agent reads it at the top of every turn; agents may append to it via a `context-delta` fenced block in their reply. The per-turn subagent extracts the block and returns it as `context_delta`; the moderator appends to `context.md`.
-- **Private memory** — `agents/<cli>.md`, one per CLI in the roster. Free-form. Only that CLI reads its own file. The per-turn subagent extracts a `private-delta` fenced block from the CLI's reply and returns it as `private_delta`; the moderator appends to `agents/<cli>.md`. (Both writers — extraction and append — are described in `../SKILL.md` §4a.)
+- **Shared context** — `context.md`, one per run. Free-form. Every agent reads it at the top of every turn; agents append to it **only** via a `context-delta` fenced block in their reply. The per-turn subagent extracts the block and returns it as `context_delta`; the moderator appends to `context.md`.
+- **Private memory** — `agents/<cli>.md`, one per CLI in the roster. Free-form. Only that CLI reads its own file; the per-turn subagent extracts a `private-delta` fenced block from the CLI's reply and returns it as `private_delta`, and the moderator appends to `agents/<cli>.md`. (Both writers — extraction and append — are described in `../SKILL.md` §4a.)
 
 These files are deliberately unstructured. They are scratchpads, not databases. The transcript and bindings carry the structured signal.
+
+### Delta-only discipline
+
+`context.md` and `agents/<cli>.md` hold **only** what the agent emitted inside `context-delta` / `private-delta` blocks. The moderator must not lift prose from the agent's main reply into either file — the full reply already lives in `transcript.jsonl` (`text` field) and on disk at `stages/<n>/turns/<NNN>-<cli>-<role>/reply.md`. Three storage locations for "what the agent said this turn" would invite drift; one canonical (the transcript), one human-readable (`reply.md`), and the scratchpads carry only what the agent explicitly chose to broadcast.
 
 ## `context.md` — shared scratchpad
 
@@ -119,11 +123,11 @@ Shared comes before private so the agent integrates the public state first, then
 
 ## What does NOT belong in context files
 
-- **The verdict.** The synthesis content comes from the in-format synthesizer role (speaker / judge / editor / arbiter / synthesizer); the canonical top-level `verdict.md` is written by `meeting-note` from that content.
+- **The verdict.** The synthesis content comes from the in-format synthesizer role (speaker / judge / editor / arbiter / synthesizer); the moderator writes it to `stages/<N>/verdict.md` (the bindings target), and the scribe folds it into the run-wide `notes.md`.
 - **Per-turn output for the record.** That's `transcript.jsonl`.
 - **Bindings between stages.** Those are extracted from `verdict.md` per the agenda's `output_bindings`.
 - **Long quotes from the original artifact.** The artifact is in the prompt header or referenced by path; don't re-quote it into the scratchpad.
 
 ## Context files for sub-debates
 
-A composed role's sub-debate has its own `context.md` and `agents/<cli>.md` files inside `<parent-run>/sub/<sub-id>/`. Sub-debate context is **opaque** to the parent: only the sub's `verdict.md` flows up. This matches the privacy norm in `../../debate-agenda/references/composition.md`.
+A composed role's sub-debate has its own `context.md` and `agents/<cli>.md` files inside the embedded sub-run directory at `stages/<n>-<name>/turns/<NNN>-compose-<role>/sub/`. Sub-debate context is **opaque** to the parent: only the sub's verdict text (mirrored to `sub-verdict.md` next to the sub-run) flows up. This matches the privacy norm in `../../debate-agenda/references/composition.md`.

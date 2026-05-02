@@ -2,13 +2,14 @@
 
 The `consensus` preset of the `workshop` primitive is the right fit when the deliverable is a *document* — an API surface, a spec, a plan — and you want multiple models to converge on it. Every contributor is a peer; there are no adversarial roles. The output is the agreed artifact, not a ruling.
 
-## When to pick consensus (vs. committee or peer-review)
+## When to pick `workshop:consensus` (vs. `workshop:committee` or `panel:peer-review`)
 
 All three are presets, not standalone formats. They sit inside two primitives — `workshop` (committee + consensus) and `panel` (peer-review). Pick the one whose interaction shape matches your problem.
 
 - **`workshop:consensus`** — *"design this API together"* — every CLI proposes, all critique each other's drafts, then they iterate until they converge. The output is one merged design.
 - **`workshop:committee`** — *"draft a memo / ADR / position paper"* — small group deliberates in private; an editor writes the final doc. Better when you want one voice on the page.
 - **`panel:peer-review`** — *"review this design doc"* — you already have a draft; reviewers critique it independently and an editor adjudicates. Better when there's a single author.
+
 
 If you don't have a draft yet and want multiple models to *jointly produce* one, `workshop:consensus` fits. If you do, `panel:peer-review` fits. If you want a polished one-voice document, `workshop:committee` fits.
 
@@ -64,7 +65,7 @@ Termination: all contributors report `"changed": false` and no `remaining_concer
 
 ## How to read the verdict
 
-`verdict.md` is the agreed design. The **Confidence** field tells you how much weight to put on it:
+`notes.md` is the agreed design (the run-wide user-facing summary; the underlying stage verdict is at `stages/1-consensus/verdict.md` if you want the bindings-target view). The **Confidence** field tells you how much weight to put on it:
 
 - **converged** → all contributors stopped changing their drafts. High confidence; the design is genuinely shared.
 - **partial** → most converged, but one contributor still had concerns. Skim **Remaining concerns** before accepting.

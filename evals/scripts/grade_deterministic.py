@@ -15,6 +15,7 @@ predicate fails here, the run is flagged regardless of how the judge scores it.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -27,9 +28,15 @@ VALID_ERROR_CODES = {
     None, "auth", "rate_limit", "timeout", "contract_violation",
     "refusal", "unknown", "budget_exhausted",
 }
-TRANSCRIPT_REQUIRED_FIELDS = {"turn", "stage", "role", "cli", "ts", "exit_code"}
+TRANSCRIPT_REQUIRED_FIELDS = {
+    "turn", "stage", "role", "cli", "ts", "exit_code",
+    "prompt_sha256", "text", "error", "retry_count",
+}
 STATE_REQUIRED_FIELDS = {"run_id", "status", "started_at", "stages"}
 SECTION_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
+PROMPT_DERIVED_HEADER_RE = re.compile(
+    r"^<!-- generated from transcript\.jsonl turn (\d+) \(sha256 ([0-9a-f]{64})\); do not edit -->\n"
+)
 
 
 def load_fixture(path: Path) -> tuple[dict, str]:
@@ -132,6 +139,17 @@ def check_transcript(run_dir: Path) -> dict:
         if missing:
             issues.append(f"line {ln}: missing {sorted(missing)}")
             continue
+        has_prompt = isinstance(obj.get("prompt"), str)
+        has_prompt_gz = isinstance(obj.get("prompt_gz"), str)
+        if not has_prompt and not has_prompt_gz:
+            issues.append(f"line {ln}: missing prompt or prompt_gz")
+        prompt_sha = obj.get("prompt_sha256")
+        if not isinstance(prompt_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", prompt_sha):
+            issues.append(f"line {ln}: prompt_sha256 must be 64 lowercase hex chars")
+        elif has_prompt:
+            actual_sha = hashlib.sha256(obj["prompt"].encode()).hexdigest()
+            if prompt_sha != actual_sha:
+                issues.append(f"line {ln}: prompt_sha256 does not match prompt")
         turns += 1
         t = obj["turn"]
         if not isinstance(t, int) or t <= last_turn:
@@ -186,6 +204,109 @@ def check_state(run_dir: Path, expected_terminal: str | None = "completed") -> d
     }
 
 
+def _turn_dir_name(turn: int, cli: str, role: str) -> str:
+    cli_segment = "compose" if cli.startswith("compose:") else cli
+    safe_cli = re.sub(r"[^A-Za-z0-9_.:-]+", "-", cli_segment).strip("-")
+    safe_role = re.sub(r"[^A-Za-z0-9_.:-]+", "-", role).strip("-")
+    return f"{turn:03d}-{safe_cli}-{safe_role}"
+
+
+def check_workspace_layout(run_dir: Path) -> dict:
+    """Validate the MECE run-dir layout introduced by workspace.md."""
+    issues: list[str] = []
+    legacy = ["verdict.md", "meeting-notes.md", "failures.md", "prompts", "logs", "sub"]
+    present_legacy = [name for name in legacy if (run_dir / name).exists()]
+    if present_legacy:
+        issues.append(f"legacy top-level artifacts present: {present_legacy}")
+
+    stages_dir = run_dir / "stages"
+    if not stages_dir.is_dir():
+        issues.append("stages/ missing")
+    if not (run_dir / "agents" / "moderator.md").exists():
+        issues.append("agents/moderator.md missing")
+
+    state_stages: list[dict] = []
+    state_path = run_dir / "state.json"
+    if state_path.exists():
+        try:
+            state = json.loads(state_path.read_text())
+            stages = state.get("stages")
+            if isinstance(stages, list):
+                state_stages = [s for s in stages if isinstance(s, dict)]
+            else:
+                issues.append("state.json stages must be a list")
+        except Exception as e:
+            issues.append(f"state.json parse error during layout check: {e}")
+
+    for stage in state_stages:
+        idx = stage.get("index")
+        name = stage.get("name")
+        if not isinstance(idx, int) or not isinstance(name, str):
+            continue
+        matches = sorted(stages_dir.glob(f"{idx}-*")) if stages_dir.is_dir() else []
+        if not matches:
+            issues.append(f"stage {idx} ({name}) has no stages/{idx}-<name>/ directory")
+            continue
+        for stage_dir in matches:
+            if stage.get("status") == "completed" and not (stage_dir / "verdict.md").exists():
+                issues.append(f"{stage_dir.relative_to(run_dir)}/verdict.md missing for completed stage")
+            if not (stage_dir / "turns").is_dir():
+                issues.append(f"{stage_dir.relative_to(run_dir)}/turns/ missing")
+
+    transcript_path = run_dir / "transcript.jsonl"
+    if transcript_path.exists():
+        for ln, line in enumerate(transcript_path.read_text().splitlines(), 1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            if "action" in obj:
+                continue
+            turn = obj.get("turn")
+            stage = obj.get("stage")
+            cli = obj.get("cli")
+            role = obj.get("role")
+            prompt = obj.get("prompt")
+            prompt_sha = obj.get("prompt_sha256")
+            if not isinstance(turn, int) or not isinstance(stage, int) or not isinstance(cli, str) or not isinstance(role, str):
+                continue
+            stage_matches = sorted(stages_dir.glob(f"{stage}-*")) if stages_dir.is_dir() else []
+            if not stage_matches:
+                continue
+            turn_dir = stage_matches[0] / "turns" / _turn_dir_name(turn, cli, role)
+            if not turn_dir.is_dir():
+                issues.append(f"line {ln}: turn dir missing: {turn_dir.relative_to(run_dir)}")
+                continue
+            prompt_path = turn_dir / "prompt.derived.md"
+            if not prompt_path.exists():
+                issues.append(f"line {ln}: {prompt_path.relative_to(run_dir)} missing")
+            else:
+                prompt_text = prompt_path.read_text()
+                header = PROMPT_DERIVED_HEADER_RE.match(prompt_text)
+                if not header:
+                    issues.append(f"line {ln}: prompt.derived.md header missing/malformed")
+                elif int(header.group(1)) != turn or header.group(2) != prompt_sha:
+                    issues.append(f"line {ln}: prompt.derived.md header does not match transcript")
+                elif isinstance(prompt, str) and prompt_text[header.end():] != prompt:
+                    issues.append(f"line {ln}: prompt.derived.md body does not match transcript prompt")
+            if not (turn_dir / "reply.md").exists():
+                issues.append(f"line {ln}: {turn_dir.relative_to(run_dir)}/reply.md missing")
+            if not (turn_dir / "stdout.log").exists():
+                issues.append(f"line {ln}: {turn_dir.relative_to(run_dir)}/stdout.log missing")
+            stderr_path = turn_dir / "stderr.log"
+            if stderr_path.exists() and stderr_path.stat().st_size == 0:
+                issues.append(f"line {ln}: {stderr_path.relative_to(run_dir)} is empty; delete empty stderr.log")
+
+    return {
+        "check": "workspace_layout",
+        "pass": not issues,
+        "details": "; ".join(issues[:8]) or "ok",
+    }
+
+
 def check_artifact_present(run_dir: Path, name: str) -> dict:
     p = run_dir / name
     exists = p.exists() and p.stat().st_size > 0
@@ -196,10 +317,10 @@ def check_artifact_present(run_dir: Path, name: str) -> dict:
     }
 
 
-def apply_assertion(rule: dict, run_dir: Path) -> tuple[bool, str]:
+def apply_assertion(rule: dict, run_dir: Path, default_target: str) -> tuple[bool, str]:
     """Check one fixture assertion. Returns (pass, message)."""
     kind = rule.get("kind")
-    target = rule.get("target", "verdict.md")
+    target = rule.get("target", default_target)
     md = (run_dir / target).read_text() if (run_dir / target).exists() else ""
     sections = split_sections(md)
 
@@ -327,6 +448,25 @@ def apply_assertion(rule: dict, run_dir: Path) -> tuple[bool, str]:
     return False, f"unknown rule kind {kind!r}"
 
 
+def _default_assertion_target(run_dir: Path, fm: dict) -> str:
+    """Pick the natural default target for fixture assertions.
+
+    Fixtures encode format-shape expectations (parliament's Rationale, consensus's
+    Artifact, etc.) — these sections live in the stage verdict, not the merged
+    top-level notes.md. Find the first existing stages/<n>-<name>/verdict.md
+    and use it; if none exists (run never wrote a stage verdict), fall back to
+    notes.md so the rule still gets evaluated against something.
+    """
+    stages_dir = run_dir / "stages"
+    if stages_dir.is_dir():
+        # Sorted so single-stage fixtures get stages/1-<format>/verdict.md.
+        for stage in sorted(stages_dir.iterdir()):
+            cand = stage / "verdict.md"
+            if cand.exists():
+                return str(cand.relative_to(run_dir))
+    return "notes.md"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--fixture", required=True, type=Path)
@@ -340,13 +480,20 @@ def main() -> int:
     checks.append(check_agenda(args.run_dir))
     checks.append(check_transcript(args.run_dir))
     checks.append(check_state(args.run_dir))
-    checks.append(check_artifact_present(args.run_dir, "verdict.md"))
-    checks.append(check_artifact_present(args.run_dir, "meeting-notes.md"))
+    checks.append(check_artifact_present(args.run_dir, "notes.md"))
+    checks.append(check_workspace_layout(args.run_dir))
+
+    # Default assertion target: the stage verdict for the fixture's format.
+    # Fixtures test whether the format produced its expected output sections,
+    # which live in stages/<n>-<format>/verdict.md, not in the merged notes.md.
+    # Rules can override per-rule with `target: notes.md` when they care about
+    # the run-wide summary instead.
+    default_target = _default_assertion_target(args.run_dir, fm)
 
     rule_results = []
     for rule in fm.get("assertions", []) or []:
         try:
-            ok, msg = apply_assertion(rule, args.run_dir)
+            ok, msg = apply_assertion(rule, args.run_dir, default_target)
         except Exception as e:
             ok, msg = False, f"rule error: {e}"
         rule_results.append({"rule": rule, "pass": ok, "details": msg})

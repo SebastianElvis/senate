@@ -5,7 +5,7 @@ How a single fixture run's *deterministic* checks become one entry in `scorecard
 ## Inputs
 
 - The fixture file (task, roster, rounds, expected verdict shape).
-- The completed run directory under `.evals/runs/<run-id>/` with `transcript.jsonl`, `verdict.md`, and (if any) `failures.md`.
+- The completed run directory under the harness workspace at `<workspace>/.senate/runs/<run-id>/` with `transcript.jsonl`, `notes.md`, and (in multi-stage runs) `stages/<n>/verdict.md` files. The `.evals/` directory is for scorecards and reports, not run dirs. Failure facts are in `transcript.jsonl` (per-turn `error` codes); there is no separate `failures.md`.
 
 ## Outputs per run
 
@@ -26,7 +26,7 @@ Count occurrences of each `error` code in `transcript.jsonl`. Zero-fill missing 
 
 ### 3. Verdict shape
 
-Apply each rule from the fixture's "Expected verdict shape" section to `verdict.md`.
+Apply each rule from the fixture's "Expected verdict shape" section to the first completed stage verdict by default (`stages/<n>-<name>/verdict.md`). These assertions describe the format's synthesis shape, and that shape now lives in the stage verdict, not in the merged top-level `notes.md`. Rules can target `notes.md` explicitly via the rule's `target` field when they care about the run-wide user-facing summary.
 
 Rules are expressed as simple predicates. Two common ones:
 

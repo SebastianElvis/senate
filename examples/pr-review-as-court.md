@@ -58,7 +58,7 @@ Early exit: if either side concedes mid-cross, the moderator skips to the ruling
 
 ## How to read the verdict
 
-`verdict.md` will have one of three decisions:
+`notes.md` (the user-facing summary) will have one of three decisions:
 
 - **sustain** → prosecution wins. The PR has problems the defense couldn't refute. Do not merge as-is. Read **Reasoning** for which objections held.
 - **dismiss** → defense wins. The objections were addressable. Read **Dissent** to see what the judge thought was the *next-strongest* concern — that's usually the thing to fix anyway, even if it didn't block.

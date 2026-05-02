@@ -38,18 +38,23 @@ If any check fails, do not start. Surface to the user via `senate`.
 
 ### 2. Initialize shared context
 
-Each run dir contains a set of shared markdown files that agents read every turn (see `references/context.md`):
+Each run dir contains a set of files agents read every turn (see `references/context.md`; full layout in `../senate/references/workspace.md`):
 
 ```
-agenda.md             # the plan (already exists)
-context.md            # shared scratchpad, free-form, append-only across turns
-transcript.jsonl      # append-only structured per-turn record
-agents/<cli>.md       # per-agent private memory (one file per CLI in the roster) — moderator writer
-agents/<cli>.<turn>.log    # raw stdout per turn — per-turn subagent writer
-agents/<cli>.<turn>.stderr # raw stderr per turn (only when non-empty) — per-turn subagent writer
+agenda.md                                  # the plan (already exists)
+context.md                                 # shared scratchpad, delta-only, append-only across turns — moderator writer
+transcript.jsonl                           # append-only canonical per-turn record — moderator writer
+agents/moderator.md                        # moderator's governance log (you write this)
+agents/<cli>.md                            # per-agent private memory (one file per CLI in the roster) — moderator writer
+stages/<n>-<name>/turns/<NNN>-<cli>-<role>/{prompt.derived.md,stdout.log,stderr.log,reply.md}  # per-turn subagent writer
 ```
 
-On first start of a run: create empty `context.md` (with a brief header explaining its purpose) and an empty `agents/<cli>.md` for each unique CLI in the agenda.
+On first start of a run:
+
+- Create empty `context.md` with a brief header explaining its purpose.
+- Create empty `agents/<cli>.md` for each unique CLI in the agenda.
+- Create empty `agents/moderator.md` with a brief header explaining it is the governance log (re-plans, contract retries, role/format swaps, tie-break rationale — every entry must cross-link the relevant `turn:` / `stage:` / `incident:` ID).
+- Create the `stages/<n>-<name>/` directory for each stage in the agenda. Single-stage runs still get exactly one stage dir (`stages/1-<format>/`).
 
 ### 3. Walk the stages
 
@@ -60,11 +65,15 @@ For each `stage` in `agenda.stages` (in `index` order):
 3. For each phase the format specifies:
    - For each turn in the phase (sequential or parallel per the format):
      - Build the turn prompt (see "Turn prompt construction" below).
-     - **Dispatch the CLI call as a subagent** (see "Per-turn subagent" below). Never shell out to the CLI from your own context — raw stdout, stderr, banners, and re-prompt traffic must not enter the moderator's window. Parallel turns become parallel subagent dispatches; commit their results in turn-id order after all have returned (see "Parallel-turn ordering" in §4a).
-     - The subagent returns a small structured result (full shape in §4a). Forward its fields into `transcript.jsonl`, `context.md`, and `agents/<cli>.md` per the commit pattern, then discard the result — you do not retain `text` or `parsed_output` across turns. You never open the raw `.log` file; the on-disk log is for replay/debug only.
-     - On `error.kind == "contract_violation"`, apply the format's fallback rule. On any other error, follow `references/failures.md`, record the line, **then apply the escalation rule from `references/failures.md` § Escalation before proceeding**. In particular: an `auth` error aborts the entire run; do not dispatch the same CLI again, do not start the next turn. Update `state.json` to `status: aborted` with the reason, write `failures.md`, and hand back to `senate`.
-     - Append a JSONL line to `transcript.jsonl` per the canonical schema in `../senate/references/workspace.md`. Subagent-sourced fields: `text`, `exit_code`, `retry_count`, `stderr_tail`, `structured` ← `parsed_output`, `error` ← `error.kind`, `log_path`, `retry_log_path`. Moderator-sourced fields: `prompt` (you built it), `ts`, `prompt_tokens` / `completion_tokens` / `tokens_estimated`, `context_delta_appended` / `private_delta_appended` (true iff you appended a non-empty delta this turn), `sub_run_id` (set only for composed sub-debate turns).
+     - Mint the turn directory at `stages/<n>-<name>/turns/<NNN>-<cli>-<role>/` (NNN is the monotonic turn number across the whole run, zero-padded to 3 digits — same value as the `turn` field in `transcript.jsonl`).
+     - Write the prompt to `<turn-dir>/prompt.derived.md` with a do-not-edit header (`<!-- generated from transcript.jsonl turn N (sha256 …); do not edit -->`). This is a one-way mirror of the `prompt` field; the moderator is the sole writer.
+     - **Dispatch the CLI call as a subagent** (see "Per-turn subagent" below). Never shell out to the CLI from your own context — raw stdout, stderr, banners, and re-prompt traffic must not enter the moderator's window. The subagent reads the relevant `../invoke-agent/references/<cli>.md` playbook, captures stdout to `<turn-dir>/stdout.log` (always present, even if empty on failure) and stderr to `<turn-dir>/stderr.log` (delete if empty), validates the contract per `references/contracts.md`, and returns a small structured result (full shape in §4a). Parallel turns become parallel subagent dispatches; commit their results in turn-id order after all have returned (see "Parallel-turn ordering" in §4a).
+     - Forward the subagent's fields into `transcript.jsonl`, `context.md`, and `agents/<cli>.md` per the commit pattern, then discard the result — you do not retain `text` or `parsed_output` across turns. You never open the raw `stdout.log` / `stderr.log` files; they are for replay/debug only.
+     - On `error.kind == "contract_violation"`, apply the format's fallback rule. On any other error, follow `references/failures.md`, record the line, **then apply the escalation rule from `references/failures.md` § Escalation before proceeding**. In particular: an `auth` error aborts the entire run; do not dispatch the same CLI again, do not start the next turn. Update `state.json` to `status: aborted` with `aborted_reason` and hand back to `senate`. (Failure facts live in `transcript.jsonl`; the scribe surfaces a rollup in `notes.md`.)
+     - Append a JSONL line to `transcript.jsonl` per the canonical schema in `../senate/references/workspace.md`. Subagent-sourced fields: `text`, `exit_code`, `retry_count`, `stderr_tail`, `structured` ← `parsed_output`, `error` ← `error.kind`, `log_path`, `retry_log_path`. Moderator-sourced fields: `prompt` (you built it), `prompt_sha256`, `ts`, `prompt_tokens` / `completion_tokens` / `tokens_estimated`, `context_delta_appended` / `private_delta_appended` (true iff you appended a non-empty delta this turn), `sub_run_id` (set only for composed sub-debate turns).
+     - Write `<turn-dir>/reply.md` — the cleaned reply text with fenced `context-delta` / `private-delta` / structured-output blocks stripped (the subagent may write this directly, or the moderator does it on commit; see §4a).
      - Apply context updates: append `context_delta` to `context.md`; append `private_delta` to `agents/<cli>.md`. See `references/context.md`.
+     - When you make an adaptive decision worth recording (re-prompt vs fallback, format swap, role swap, tie-break, decision to pause vs continue), append an entry to `agents/moderator.md` with a `turn:` cross-link rather than narrating the underlying fact.
    - **Update `state.json` at every turn boundary** with the new `last_activity_at` (atomic write: temp file + rename). Don't batch state updates to stage boundaries — a crashed or timed-out run leaves no signal of progress otherwise.
 4. Check budget per `references/budget.md` between turns. If a cap is near, gracefully terminate and skip to the stage's synthesis turn.
 5. Extract the stage's `output_bindings` from the verdict.
@@ -204,11 +213,11 @@ If any validation step fails, do not execute. Surface to the user via `senate` w
 When a stage's termination condition fires (per the format file), the moderator:
 
 - Runs the stage's synthesis turn — one designated role per the format (speaker / judge / editor / synthesizer). The synthesis turn's structured output and prose become the stage's verdict content.
-- Writes the stage's verdict to `<run-dir>/stages/<index>-<name>/verdict.md` (multi-stage runs only). Single-stage runs do not write a stage-level verdict file; the synthesis turn's text lives in `transcript.jsonl` and `meeting-note` reads it from there.
+- Writes the stage's verdict to `<run-dir>/stages/<index>-<name>/verdict.md`. Every run has at least one stage (single-stage runs get `stages/1-<format>/`), so this is always a real path. The verdict's content is the synthesis turn's structured output and prose.
 - Extracts `output_bindings` and writes them to `<run-dir>/bindings.json` (cumulative across stages).
 - Honors any checkpoint declared on this stage.
 
-The moderator does **not** write the top-level `<run-dir>/verdict.md` — that is `meeting-note`'s job. The format-level "speaker writes verdict.md" wording in the format files refers to the synthesis turn's *content production*, not to who writes the canonical top-level file.
+The moderator does **not** write the top-level `<run-dir>/notes.md` — that is `meeting-note`'s job. The format-level "speaker writes the verdict" wording refers to the synthesis turn's *content production*; the moderator writes that content to `stages/<N>/verdict.md` (the bindings target), and the scribe folds it into `notes.md` after the run.
 
 ### 7. Hand off
 
@@ -217,7 +226,7 @@ When the last stage finishes:
 - Update `<run-dir>/state.json`: `status: completed`, `completed_at: "..."`. Full schema in `../senate/references/workspace.md` (`## state.json schema`).
 - Return to `senate` with a one-line summary and the path to the run dir.
 
-`senate` then invokes `meeting-note`, which writes both `verdict.md` and `meeting-notes.md`. The moderator never writes either.
+`senate` then invokes `meeting-note`, which writes the user-facing `notes.md` (the merged file that replaces the old `verdict.md` + `meeting-notes.md` pair). The moderator never writes `notes.md`. The moderator does write per-stage `stages/<n>/verdict.md` files (the bindings target).
 
 ## Single-stage vs multi-stage
 

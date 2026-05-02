@@ -57,7 +57,7 @@ Every primitive file documents these sections in order:
    1. **Roles** — named slots, each with a short brief.
    2. **Phases** — ordered list. Each phase declares parallel/sequential, which roles speak, prompt template, output contract.
    3. **Termination** — when the debate ends.
-   4. **Synthesis** — which role produces the synthesis content.
+   4. **Synthesis** — which role produces the synthesis content (the basis of the stage verdict). The moderator writes the synthesis to `stages/<N>/verdict.md` in every run (single-stage runs have exactly one stage); `meeting-note` writes the user-facing top-level `notes.md` after the run.
    5. **Defaults** — recommended rounds, roster size limits, fallback behavior.
 
 ## Common schema (multi-stage pipeline recipes)

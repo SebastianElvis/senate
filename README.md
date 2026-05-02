@@ -1,6 +1,6 @@
 # senate
 
-Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, consensus, …) to reach more robust answers than any single model.
+Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, panel, workshop, brainstorm) to reach more robust answers than any single model.
 
 ## Install
 
@@ -85,7 +85,7 @@ Five skills, organized around a clean lifecycle:
 senate
   → debate-agenda    (optional)   — plan: pick format, pick roster, sequence stages, ask if needed
   → moderate-debate                — run: dispatch per-turn subagents, manage context, handle failures
-  → meeting-note                   — consolidate: write verdict.md and meeting-notes.md
+  → meeting-note                   — consolidate: write notes.md (single user-facing summary)
 ```
 
 Sequence of execution for a single run:
@@ -116,14 +116,14 @@ Sequence of execution for a single run:
                    │   ▶ context.md           kimi  · claude
                    │   ▶ agents/<cli>.md
                    ▼
-         ┌───────────────────┐ ──── writes ───▶  verdict.md
-         │   meeting-note    │                   meeting-notes.md
+         ┌───────────────────┐ ──── writes ───▶  notes.md
+         │   meeting-note    │
          │     (scribe)      │
          └─────────┬─────────┘
                    │
                    ▼
               user-facing
-              summary + verdict
+              summary
 ```
 
 `moderate-debate` loops over turns, dispatching each turn's CLI work into a fresh per-turn subagent. The subagent reads the relevant `invoke-agent` playbook, shells out to the CLI, writes raw logs, validates contracts/re-prompts once, and returns only a structured result for the moderator to commit. Pipelines repeat the planner/moderator pair per stage under `stages/<N>-<name>/` before `meeting-note` consolidates.
@@ -133,7 +133,7 @@ Sequence of execution for a single run:
 | `senate` | Top-level entry. Mints the run dir and routes through the three lifecycle skills. |
 | `debate-agenda` | Plans the debate. Picks the format, picks the roster, sequences multi-stage pipelines, resolves composed (sub-debate) roles, asks for clarification when the request is ambiguous. Hosts primitive formats at `formats/` and pipeline recipes in `references/stages.md`. |
 | `moderate-debate` | Runs the debate from the agenda. Drives turns by dispatching standalone per-turn subagents, commits transcript/context updates, handles failures, manages checkpoints, calls back to `debate-agenda` for mid-run re-plans. |
-| `meeting-note` | Consolidates the run. Reads agenda + transcript + context + per-stage verdicts; writes `verdict.md` and `meeting-notes.md`. |
+| `meeting-note` | Consolidates the run. Reads agenda + transcript + context + per-stage verdicts; writes the merged user-facing `notes.md`. |
 | `invoke-agent` | Per-CLI invocation playbook (codex, gemini, cursor, kimi, claude). Read by per-turn subagents dispatched from `moderate-debate`. |
 
 Each skill follows the [Agent Skills spec](https://agentskills.io/specification): a `SKILL.md` at the root and on-demand documentation under `references/`. The `evals/` directory is a sibling evaluation harness (not a shipped skill) — see [Evaluating](#evaluating) below.
@@ -156,28 +156,42 @@ For end-to-end walk-throughs of the most common cases — *Review a PR as a cour
 
 ## Run-dir layout
 
-Single-stage runs and multi-stage pipelines share the same workspace conventions; multi-stage runs add a `stages/` subdirectory. Full layout in [`skills/senate/references/workspace.md`](skills/senate/references/workspace.md).
+Single-stage and multi-stage runs share the same conventions; `stages/` is always present (single-stage runs get exactly one entry). Full layout in [`skills/senate/references/workspace.md`](skills/senate/references/workspace.md).
 
 ```
 .senate/runs/<id>/
-  agenda.md          # the plan, with revisions log
-  context.md         # shared scratchpad — every agent reads each turn
-  agents/<cli>.md    # per-CLI private memory across turns
-  agents/<cli>.<turn>.log    # raw stdout written by the per-turn subagent
-  agents/<cli>.<turn>.stderr # raw stderr when non-empty
-  transcript.jsonl   # append-only structured per-turn record
-  verdict.md         # canonical decision (meeting-note writes this)
-  meeting-notes.md   # user-facing summary (meeting-note writes this)
-  state.json         # run status, used for resume
+  agenda.md            # the plan, with revisions log
+  context.md           # shared scratchpad (delta-only) — every agent reads each turn
+  transcript.jsonl     # canonical per-turn record (failure facts live here as `error` codes)
+  state.json           # run status, used for resume
+  notes.md             # single user-facing summary (meeting-note writes this)
+  bindings.json        # multi-stage only
+  agents/
+    moderator.md       # moderator's governance log
+    <cli>.md           # per-CLI private memory across turns
+  stages/
+    <n>-<name>/
+      verdict.md       # synthesis content (bindings target)
+      turns/
+        <NNN>-<cli>-<role>/   # one dir per turn, written by the per-turn subagent
+          prompt.derived.md
+          stdout.log   # always present; may be empty on failure
+          stderr.log   # only if non-empty
+          reply.md
 ```
 
 ## Evaluating
 
-`evals/` runs fixture debates end-to-end and grades them on two tiers: deterministic schema/contract checks against the run-dir layout, plus LLM judges (verdict, agenda, meeting-notes, transcript-quality, pairwise) invoked via the Claude CLI. No API key required — the judges use your Claude Code OAuth session.
+`evals/` runs fixture debates end-to-end and grades them on two tiers: deterministic schema/contract checks against the run-dir layout, plus LLM judges (notes, agenda, transcript-quality, pairwise) invoked via the Claude CLI. No API key required — the judges use your Claude Code OAuth session.
 
 ```bash
 # Run all fixtures (default models: sonnet 4.6 orchestrator, opus 4.7 judge)
 evals/run.sh
+
+# Run the smoke fixture without Claude quota dependency
+evals/run.sh --orchestrator-cli codex --judge-cli codex \
+  --orchestrator-model gpt-5.4-mini --judge-model gpt-5.4-mini \
+  --force-roster-cli codex fixtures/_smoke-parliament.md
 
 # One fixture
 evals/run.sh evals/fixtures/parliament-migration.md

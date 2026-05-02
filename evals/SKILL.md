@@ -1,6 +1,6 @@
 ---
 name: evals
-description: Evaluation harness for the senate skill. Runs fixture debates end-to-end, applies deterministic graders against the run-dir contract, and uses Claude CLI as an LLM judge for quality dimensions (verdict, agenda, meeting-notes, transcript). Use when the user wants to measure which models are reliable in which formats, benchmark a new CLI playbook, or verify a format file after changes.
+description: Evaluation harness for the senate skill. Runs fixture debates end-to-end, applies deterministic graders against the run-dir contract, and uses Claude CLI as an LLM judge for quality dimensions (verdict, agenda, notes, transcript). Use when the user wants to measure which models are reliable in which formats, benchmark a new CLI playbook, or verify a format file after changes.
 ---
 
 # evals — evaluation harness
@@ -8,7 +8,7 @@ description: Evaluation harness for the senate skill. Runs fixture debates end-t
 A sibling skill to `senate`. Runs **fixtures** through the full senate lifecycle, then grades the result with two complementary signals:
 
 - **Deterministic graders** — schema/contract conformance against `skills/senate/references/workspace.md`. Cheap, run first.
-- **LLM judges** — quality of `verdict.md`, `agenda.md`, `meeting-notes.md`, and transcript process. Invoked via `claude -p --output-format json` (no API key needed; uses your Claude Code OAuth session).
+- **LLM judges** — quality of `notes.md` (scored under both the `verdict` rubric and the `meeting_notes` rubric), `agenda.md`, and transcript process. Invoked via `claude -p --output-format json` (no API key needed; uses your Claude Code OAuth session).
 
 Methodology follows [Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) — capability vs. regression sets, deterministic + model-based + (eventual) human review, eval-driven iteration.
 
@@ -28,9 +28,9 @@ evals/
   run.sh              # thin entrypoint (calls scripts/run_eval.py)
   fixtures/           # one fixture per .md file
   judges/             # markdown rubrics, one per LLM-judge dimension
-    verdict.md
+    verdict.md        # scores the structured-decision section of notes.md
     agenda.md
-    meeting_notes.md
+    meeting_notes.md  # scores the narrative sections of notes.md
     transcript_quality.md
     pairwise.md       # for regression A/B comparison
   scripts/
@@ -113,6 +113,11 @@ evals/run.sh fixtures/parliament-migration.md
 # Override models
 evals/run.sh --orchestrator-model claude-opus-4-7 --judge-model claude-opus-4-7
 
+# Codex-only smoke path (orchestrator, judge, and fixture roster)
+evals/run.sh --orchestrator-cli codex --judge-cli codex \
+  --orchestrator-model gpt-5.4-mini --judge-model gpt-5.4-mini \
+  --force-roster-cli codex fixtures/_smoke-parliament.md
+
 # Generate a markdown report from accumulated scorecard data
 python3 evals/scripts/report.py --out evals/.evals/report.md
 ```
@@ -139,7 +144,9 @@ Each line of `evals/.evals/scorecard.jsonl` is one fixture run. Provenance field
   "started_at": "2026-04-30T10:00:00+00:00",
   "completed_at": "2026-04-30T10:05:12+00:00",
   "wall_clock_sec": 312,
+  "orchestrator_cli": "claude",
   "orchestrator_model": "claude-sonnet-4-6",
+  "judge_cli": "claude",
   "judge_model": "claude-opus-4-7",
   "workspace": "/tmp/evals-parliament-migration-XYZ",
   "orchestrator_exit": 0,
@@ -150,8 +157,7 @@ Each line of `evals/.evals/scorecard.jsonl` is one fixture run. Provenance field
       {"check": "agenda_schema", "pass": true, "metrics": {...}},
       {"check": "transcript_schema", "pass": true, "metrics": {"turns": 8, "errors": 0, "by_cli": {...}}},
       {"check": "state_terminal", "pass": true},
-      {"check": "verdict_md_present", "pass": true},
-      {"check": "meeting-notes_md_present", "pass": true},
+      {"check": "notes_md_present", "pass": true},
       {"check": "fixture_assertions", "pass": true, "rules": [...]}
     ]
   },

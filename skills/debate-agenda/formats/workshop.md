@@ -179,6 +179,8 @@ Role: `editor` (or `chair` if present). Produces the synthesis (which IS the del
 - Rounds: N
 ```
 
+The editor's publication becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
+
 ### Termination
 
 - After phase 5 completes, phase 6 runs regardless of vote outcome.
@@ -293,7 +295,7 @@ Produce the final artifact as a markdown document with sections:
 - **Process notes** — number of rounds, which contributor's draft became the base, one-line rationale.
 ```
 
-Output contract: markdown with those four sections.
+Output contract: markdown with those four sections. The arbiter's reply becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
 
 ### Termination
 

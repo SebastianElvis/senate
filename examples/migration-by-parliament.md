@@ -70,13 +70,13 @@ Parliament *always* plays out the full round count — there's no early exit eve
 
 ## How to read the verdict
 
-`verdict.md` will have a vote tally and a decision:
+`notes.md` (the user-facing summary) will have a vote tally and a decision:
 
 - **pass** → plurality voted yes. **Rationale** cites which arguments carried the room. **Dissent** records the strongest case for not doing it — read it before you start the migration; that's your risk register.
 - **fail** → plurality voted no. **Dissent** here is the strongest case the *pro* side made. If you're going to migrate anyway, that's the case you'll need to argue to leadership.
 - **tied** → speaker tiebreak. The speaker's tiebreak is labeled in the verdict (`speaker_tiebreak: yes | no`). Treat tied verdicts as evidence the question is genuinely close, not as a clean answer.
 
-The structured outcome at the end of the verdict (`outcome`, `tally`, `speaker_tiebreak`) is machine-parseable; pipelines can bind to it (e.g., `bill-to-law` uses parliament's `outcome` to decide whether to proceed).
+The structured outcome at the end of `notes.md` (`outcome`, `tally`, `speaker_tiebreak`) is machine-parseable; pipelines can bind to it from the underlying stage verdict (e.g., `bill-to-law` uses parliament's `outcome` to decide whether to proceed).
 
 ## Common pitfalls
 

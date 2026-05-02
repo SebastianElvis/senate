@@ -130,7 +130,7 @@ Produce the oracle verdict as a markdown document:
 - **Confidence** — high / medium / low, with reasoning.
 ```
 
-Output contract: markdown with those six sections.
+Output contract: markdown with those six sections. The synthesizer's reply becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
 
 ### Termination
 
@@ -249,7 +249,7 @@ Output contract: markdown + trailing fenced json:
 {"decision": "accept" | "minor_revision" | "major_revision" | "reject", "revision_deadline_days": 30}
 ```
 
-On contract failure, fallback to `major_revision`.
+On contract failure, fallback to `major_revision`. The editor's decision becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
 
 ### Termination
 
@@ -260,7 +260,7 @@ On contract failure, fallback to `major_revision`.
 
 - **Rounds**: 1 (submission + reviews + revision + decision).
 - **Roster size**: 4–5.
-- **Agent failure**: missing review = that reviewer does not contribute; if ≥2 reviewers are missing, editor issues `major_revision` with a "remanded due to insufficient review coverage" note, and the run is flagged in `failures.md`.
+- **Agent failure**: missing review = that reviewer does not contribute; if ≥2 reviewers are missing, editor issues `major_revision` with a "remanded due to insufficient review coverage" note. The missing reviewers' turns are recorded in `transcript.jsonl` with their respective `error` codes; the scribe surfaces a failure rollup in `notes.md`.
 - **Blind review**: reviewers must not see each other's turns in phase 2 (moderator enforces via transcript scoping).
 
 ---
@@ -405,6 +405,8 @@ Output contract: markdown + trailing fenced json:
 ```json
 {"disposition": "finalized" | "revise_and_repost" | "withdrawn", "resolution_rate": 0.0-1.0}
 ```
+
+The editor's finalization becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
 
 ### Termination
 

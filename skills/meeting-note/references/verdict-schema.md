@@ -1,22 +1,26 @@
-# `verdict.md` schema
+# Stage `verdict.md` schema
 
-The verdict is the canonical output of a debate. It is short, structured, and citable. It should be possible to read it in 60 seconds and know what was decided.
+The per-stage verdict is the synthesis turn's content for one stage of the run, written by the **moderator** at stage completion. It is the **bindings target** — pipeline `output_bindings` are extracted from this file (`verdict.md body`, `verdict.md section <name>`, `fenced-json.<field>`).
 
-## Single-stage verdict
+Lives at `<run-dir>/stages/<n>-<name>/verdict.md`. Always present (single-stage runs have exactly one stage and therefore exactly one stage verdict).
 
-Lives at `<run-dir>/verdict.md`.
+> **Not the user-facing summary.** That is `<run-dir>/notes.md`, written by `meeting-note` (this skill). The merged `notes.md` consolidates the run-wide TL;DR, decision narrative, action items, and a top-level structured outcome. See `notes-schema.md`.
+>
+> **Not user-edited under normal flow.** The moderator writes this file; the only time it is hand-edited is when the user picks `revise` at a checkpoint (see `../../moderate-debate/references/checkpoints.md`), in which case the moderator re-extracts bindings on resume.
+
+## Shape
 
 ```markdown
-# Verdict — <format>
+# <stage-name> — <format>
 
-**Task:** <one-line task>
+**Stage:** <n>
 **Run:** `.senate/runs/<id>/`
 **Roster:** <role: cli>, <role: cli>, ...
 **Disposition:** completed | stalled | aborted | partial
 
 ## Decision
 
-<one paragraph: what was decided. For voting formats, include the tally. For ruling formats, the ruling. For consensus, the converged-upon plan in 3-5 sentences.>
+<one paragraph: what was decided in this stage. For voting formats, include the tally. For ruling formats, the ruling. For consensus, the converged plan in 3-5 sentences. For draft-producing formats, the draft (or a path to where it lives).>
 
 ## Rationale
 
@@ -37,89 +41,38 @@ Lives at `<run-dir>/verdict.md`.
   "dissent_present": true
 }
 \`\`\`
-
----
-
-**Run budget:** Xm Ys wall / cap • Zk tokens / cap • N timeouts/failures
 ```
 
-## Multi-stage verdict
+The shape is fixed by this schema; format files may add **named subsections** under `## Decision` that downstream stages can target via `verdict.md section <name>` bindings (e.g., `bill-to-law` produces a `## Final RFC` subsection inside `## Decision` to feed the next stage).
 
-Lives at `<run-dir>/verdict.md`. Stitches together the per-stage verdicts (which already exist at `<run-dir>/stages/<N>-<name>/verdict.md`).
+## Bindings extraction
 
-```markdown
-# Verdict — <agenda-name> pipeline
+Pipelines reference this file in their `output_bindings`. Supported source forms (per `../../debate-agenda/references/stages.md`):
 
-**Task:** <one-line task>
-**Run:** `.senate/runs/<id>/`
-**Pipeline:** <stage-1 (format)> → <stage-2 (format)> → ... → <stage-N (format)>
-**Disposition:** completed | stalled | aborted | partial
+| Source | Meaning |
+| --- | --- |
+| `verdict.md body` | The full markdown body of this stage's verdict. |
+| `verdict.md section <name>` | A named section (e.g., "Decision", "Rationale", "Final RFC"). |
+| `fenced-json.<field>` | A field from the fenced JSON in `## Structured outcome`. |
+| `transcript.<role>.last` | The last turn's `text` field for a given role (used when synthesis isn't a separate turn). |
 
-## Outcome
-
-<one paragraph: what the pipeline as a whole produced. Reference the final stage's deliverable.>
-
-## Stage trail
-
-| Stage | Format | Disposition | Verdict |
-| --- | --- | --- | --- |
-| 1. draft | committee | completed | [stages/1-draft/verdict.md](stages/1-draft/verdict.md) |
-| 2. review | rfc | completed | [stages/2-review/verdict.md](stages/2-review/verdict.md) |
-| 3. synthesize | committee | completed | [stages/3-synthesize/verdict.md](stages/3-synthesize/verdict.md) |
-
-## Final deliverable
-
-<the artifact the pipeline produced — a draft doc, a ruling, a spec. Either inline if short, or a path to where it lives.>
-
-Each canonical pipeline declares the **inner** structure of this section in `../../debate-agenda/references/stages.md` (e.g., `bill-to-law` produces "Final Law Text / Vote Record / Dissent / Public Comment Summary" subsections within `## Final deliverable`). The top-level shape (Task / Run / Pipeline / Disposition / Outcome / Stage trail / Final deliverable / Open questions / Structured outcome) is fixed by this schema.
-
-## Open questions
-
-<questions the pipeline did not resolve, if any.>
-
-## Structured outcome
-
-\`\`\`json
-{
-  "pipeline": "rfc-pipeline",
-  "stages_completed": 3,
-  "stages_stalled": 0,
-  "final_disposition": "completed",
-  "key_bindings": {
-    "final_doc": "<path or short value>"
-  }
-}
-\`\`\`
-
----
-
-**Run budget:** Xm Ys wall / cap • Zk tokens / cap • N timeouts/failures
-```
-
-## Verdict vs. meeting notes
-
-The **verdict** is short and canonical: what was decided. The **meeting notes** are denser and more user-facing: what happened, why, and what to do next. The verdict is what downstream stages bind against; the notes are what the human reads.
-
-Both are written by `meeting-note`. Keep them in sync — if you discover something in the transcript that changes the rationale, update both files.
+The moderator extracts bindings at stage completion (and re-extracts on `revise` resume) and writes them to `<run-dir>/bindings.json`.
 
 ## Citations
 
-Every non-obvious claim in the verdict cites a turn number. Format: `[T4]` or `[T4, T7]` or `[T4–T9]` (for a range). Cite the turn that **produced** the claim, not the turn that referenced it.
-
-For multi-stage verdicts, cite as `[stage-2 T4]` if a turn from a non-final stage matters.
+Every non-obvious claim cites a turn number. Format: `[T4]` or `[T4, T7]` or `[T4–T9]` (for a range). Cite the turn that **produced** the claim, not the turn that referenced it.
 
 ## Disposition meanings
 
-- **`completed`** — every stage's termination condition fired normally. The verdict reflects what the synthesizer/judge/editor produced.
-- **`stalled`** — the run paused because of an obstacle (budget, repeated failures, all agents refused). The verdict still gets written, but the Decision section names the obstacle and proposes options.
-- **`aborted`** — the user explicitly stopped the run. The verdict captures what was reached so far.
-- **`partial`** — for branched pipelines, some branches succeeded and some failed. The verdict documents what each branch produced.
-
-A stalled or partial verdict is **not** a failure to deliver — it's an honest record. The meeting notes will surface the issue prominently.
+- **`completed`** — the format's normal termination condition fired.
+- **`stalled`** — the stage paused mid-run (budget, repeated failures, all agents refused).
+- **`aborted`** — the run was stopped during this stage.
+- **`partial`** — some branches of a branched stage succeeded, some failed.
 
 ## Length budget
 
-- Single-stage verdict: 200–400 words. Anything longer is signal of poor synthesis.
-- Multi-stage verdict: 300–600 words plus the stage trail table.
+200–400 words plus the structured outcome JSON. If the synthesizer turn produced a much longer reply, summarize here and link to the synthesizer's full reply in the transcript.
 
-If the synthesizer turn produced a much longer verdict, summarize it here and link to the synthesizer's full reply (it's in the transcript).
+## Why this is separate from `notes.md`
+
+The stage verdict is a **machine-readable bindings source** with a fixed contract. The top-level `notes.md` is a **user-facing merged summary** that includes per-stage commentary, narrative, action items, and a pipeline-level structured outcome. Mixing the two would couple the bindings contract to the narrative contract — exactly the dual-write hazard the merged `notes.md` was created to remove at the run level.

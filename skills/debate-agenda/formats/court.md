@@ -134,7 +134,7 @@ Produce a markdown document with sections:
 - **Dissent** — the strongest argument you ruled against, fairly stated.
 ```
 
-Output contract: markdown with those three sections. The judge's ruling becomes the synthesis content; `meeting-note` writes the canonical `verdict.md` (see `../../meeting-note/references/verdict-schema.md`).
+Output contract: markdown with those three sections. The judge's ruling becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
 
 ### Termination
 
