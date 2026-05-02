@@ -2,95 +2,58 @@
 
 ![The Senate — multi-agent debate between coding CLIs](assets/banner.png)
 
-Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, panel, workshop, brainstorm) to reach more robust answers than any single model.
+Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats — parliament, court, panel, workshop, brainstorm — to reach more robust answers than any single model.
+
+## Background
+
+[**Multi-agent debate**](#references) is a well-studied technique for improving LLM reasoning: independent agents propose, critique, and revise answers under a structured protocol. Results are protocol-dependent — strong single-agent prompting can match it on some benchmarks — but a substantial body of work reports gains in factuality, divergent thinking, evaluation quality, and truthfulness.
+
+`senate` ports the *protocols* humans already use to coordinate disagreement — parliaments, courts, peer review, RFCs — and packages them as agent skills you can run across heterogeneous CLIs. See [`dev/PRODUCT.md`](dev/PRODUCT.md) for the full thesis.
 
 ## Install
 
-### Claude Code (plugin)
+**Prerequisite:** the CLIs you want to put in debates must be installed and authenticated locally — `senate` shells out to them. Each [`skills/invoke-agent/references/<cli>.md`](skills/invoke-agent/references/) has a paste-ready install check for `codex`, `gemini`, `cursor`, `kimi`, and `claude`.
 
-This repo is also a [Claude Code plugin](https://code.claude.com/docs/en/discover-plugins). From inside Claude Code:
+This repo ships as a [Claude Code plugin](https://code.claude.com/docs/en/discover-plugins) and as a cross-agent bundle via the [skills CLI](https://github.com/vercel-labs/skills) (works with most coding agents that load skills — Claude Code, Codex, Cursor, OpenCode, Gemini CLI, …).
 
-```
+```bash
+# Claude Code plugin
 /plugin marketplace add SebastianElvis/senate
 /plugin install senate@senate
-```
 
-### skills CLI
-
-The cross-agent entry point is the [skills CLI](https://github.com/vercel-labs/skills):
-
-```bash
+# Any host agent
 npx skills add SebastianElvis/senate
 ```
 
-### Source formats
-
-```bash
-# GitHub shorthand (owner/repo)
-npx skills add SebastianElvis/senate
-
-# Full GitHub URL
-npx skills add https://github.com/SebastianElvis/senate
-
-# Direct path to a single skill in the repo
-npx skills add https://github.com/SebastianElvis/senate/tree/main/skills/senate
-
-# Any git URL
-npx skills add git@github.com:SebastianElvis/senate.git
-
-# Local path (after cloning)
-npx skills add ./senate
-```
-
-### Useful flags
+Useful flags for the skills CLI:
 
 | Option | Description |
 | --- | --- |
-| `-g, --global` | Install to user directory (`~/<agent>/skills/`) instead of the current project |
-| `-a, --agent <agents...>` | Target specific agents (e.g., `claude-code`, `codex`, `cursor`, `opencode`) |
-| `-s, --skill <skills...>` | Install a subset by name (e.g., `--skill senate --skill debate-agenda`) |
-| `-l, --list` | List the skills in this repo without installing |
-| `--copy` | Copy files instead of symlinking |
-| `-y, --yes` | Skip confirmation prompts |
-| `--all` | Install all skills to all detected agents |
+| `-g, --global` | Install globally (`~/<agent>/skills/`) instead of the current project |
+| `-a, --agent <name...>` | Target specific agents (`claude-code`, `codex`, `cursor`, `opencode`, …) |
+| `-s, --skill <name...>` | Install a subset (`--skill senate`) |
+| `-l, --list` | List skills without installing |
+| `-y, --yes` | Skip prompts |
 
-### Examples
+Other commands: `npx skills list | find <q> | update senate | remove senate`. Source forms accept GitHub shorthand, full URLs, git URLs, or local paths.
 
-```bash
-# Just see what's in the repo before installing
-npx skills add SebastianElvis/senate --list
+## Usage
 
-# Install only the top-level orchestrator (the others are picked up automatically when senate routes to them)
-npx skills add SebastianElvis/senate --skill senate
+Ask your host agent for a debate in plain language:
 
-# Install all senate skills to Claude Code, globally
-npx skills add SebastianElvis/senate --all -g -a claude-code -y
+- *"Run a **parliament** between codex, gemini, and kimi on whether to migrate this service to Rust."*
+- *"Hold a **court** debate — codex prosecutes my refactor, claude defends, gemini judges."*
+- *"Drive **consensus** between three models on this API design."*
+- *"**Red-team** this deployment plan."*
+- *"**Peer-review** this design doc."*
+- *"Run an **RFC pipeline** on this spec."* (multi-stage)
+- *"Which format should I use?"* (the planner recommends one without running)
 
-# Install to multiple agents
-npx skills add SebastianElvis/senate -a claude-code -a opencode -a cursor
-```
+Run artifacts land in `<cwd>/.senate/runs/<id>/` — never in this skill repo. End-to-end walk-throughs of the headline cases live in [`examples/`](examples/README.md).
 
-### Other commands
+## Architecture
 
-```bash
-npx skills list                  # list installed skills
-npx skills find debate           # search across published skills
-npx skills update senate         # pull the latest version
-npx skills remove senate         # uninstall
-```
-
-## What's in this bundle
-
-Five skills, organized around a clean lifecycle:
-
-```
-senate
-  → debate-agenda    (optional)   — plan: pick format, pick roster, sequence stages, ask if needed
-  → moderate-debate                — run: dispatch per-turn subagents, manage context, handle failures
-  → meeting-note                   — consolidate: write notes.md (single user-facing summary)
-```
-
-Sequence of execution for a single run:
+Five skills compose one debate lifecycle:
 
 ```
               user request
@@ -98,131 +61,108 @@ Sequence of execution for a single run:
                    ▼
          ┌───────────────────┐
          │      senate       │   mints .senate/runs/<id>/
-         │   (orchestrator)  │   writes initial state.json
+         │   (orchestrator)  │
          └─────────┬─────────┘
-                   │
                    ▼
          ┌───────────────────┐
-         │   debate-agenda   │ ──── writes ───▶  agenda.md
+         │   debate-agenda   │ ──▶ agenda.md
          │     (planner)     │
          └─────────┬─────────┘
-                   │
                    ▼
          ┌───────────────────┐  dispatches   ┌──────────────────┐
-         │  moderate-debate  │ ─────────────▶ │ per-turn subagent│
-         │    (moderator)    │ ◀───────────── │ + invoke-agent   │
-         └─────────┬─────────┘ structured     └────────┬─────────┘
-                   │ result                            │ shells out
-                   │ appends                           ▼
-                   │   ▶ transcript.jsonl     codex · gemini · cursor
-                   │   ▶ context.md           kimi  · claude
-                   │   ▶ agents/<cli>.md
+         │  moderate-debate  │ ─────────────▶│ per-turn subagent│
+         │    (moderator)    │ ◀─────────────│ + invoke-agent   │
+         └─────────┬─────────┘  result       └────────┬─────────┘
+                   │ appends                          │ shells out
+                   │   ▶ transcript.jsonl             ▼
+                   │   ▶ context.md          codex · gemini · cursor
+                   │   ▶ agents/<cli>.md     kimi  · claude
                    ▼
-         ┌───────────────────┐ ──── writes ───▶  notes.md
+         ┌───────────────────┐ ──▶ notes.md
          │   meeting-note    │
          │     (scribe)      │
-         └─────────┬─────────┘
-                   │
-                   ▼
-              user-facing
-              summary
+         └───────────────────┘
 ```
 
-`moderate-debate` loops over turns, dispatching each turn's CLI work into a fresh per-turn subagent. The subagent reads the relevant `invoke-agent` playbook, shells out to the CLI, writes raw logs, validates contracts/re-prompts once, and returns only a structured result for the moderator to commit. Pipelines repeat the planner/moderator pair per stage under `stages/<N>-<name>/` before `meeting-note` consolidates.
+`moderate-debate` dispatches every turn into a fresh per-turn subagent that loads the relevant `invoke-agent` playbook, shells out to the CLI, validates the contract, and returns only a structured result. Multi-stage pipelines are expanded once by the planner into a single `agenda.md`; the moderator then runs each stage under `stages/<N>-<name>/`, calling back to the planner only for clarification or mid-run re-planning. `meeting-note` consolidates after the final stage.
 
 | Skill | Purpose |
 | --- | --- |
-| `senate` | Top-level entry. Mints the run dir and routes through the three lifecycle skills. |
-| `debate-agenda` | Plans the debate. Picks the format, picks the roster, sequences multi-stage pipelines, resolves composed (sub-debate) roles, asks for clarification when the request is ambiguous. Hosts primitive formats at `formats/` and pipeline recipes in `references/stages.md`. |
-| `moderate-debate` | Runs the debate from the agenda. Drives turns by dispatching standalone per-turn subagents, commits transcript/context updates, handles failures, manages checkpoints, calls back to `debate-agenda` for mid-run re-plans. |
-| `meeting-note` | Consolidates the run. Reads agenda + transcript + context + per-stage verdicts; writes the merged user-facing `notes.md`. |
-| `invoke-agent` | Per-CLI invocation playbook (codex, gemini, cursor, kimi, claude). Read by per-turn subagents dispatched from `moderate-debate`. |
+| `senate` | Top-level entry. Mints the run dir; routes through the lifecycle. |
+| `debate-agenda` | Picks the format and roster, sequences pipeline stages, asks for clarification. Hosts primitives at `formats/` and pipelines in `references/stages.md`. |
+| `moderate-debate` | Drives turns by dispatching per-turn subagents; commits transcript/context; handles failures and checkpoints. |
+| `meeting-note` | Reads agenda + transcript + context + verdicts; writes the user-facing `notes.md`. |
+| `invoke-agent` | Per-CLI playbooks (codex, gemini, cursor, kimi, claude) loaded inside per-turn subagents. |
 
-Each skill follows the [Agent Skills spec](https://agentskills.io/specification): a `SKILL.md` at the root and on-demand documentation under `references/`. The `evals/` directory is a sibling evaluation harness (not a shipped skill) — see [Evaluating](#evaluating) below.
-
-## Usage
-
-In your coding agent, ask for a debate in plain language:
-
-- *"Run a **parliament** between codex, gemini, and kimi on whether to migrate this service to Rust."*
-- *"Hold a **court** debate — codex prosecutes my refactor, claude defends, gemini judges."*
-- *"Drive **consensus** between three models on this API design."*
-- *"**Red-team** this deployment plan — find failure modes."*
-- *"**Peer-review** this design doc."*
-- *"Run an RFC pipeline on this spec."* (multi-stage agenda — debate-agenda picks the `rfc-pipeline` recipe)
-- *"Which format should I use for this?"* (debate-agenda answers without running the debate)
-
-Run artifacts land in `<cwd>/.senate/runs/<id>/` — never in this skill repo.
-
-For end-to-end walk-throughs of the most common cases — *Review a PR as a court*, *Design an API by consensus*, *Weigh a migration in parliament* — see [`examples/`](examples/README.md). Each one covers when to pick the format, the prompt to give the orchestrator, the recommended roster, and how to read the verdict.
+Every skill follows the [Agent Skills spec](https://agentskills.io/specification): a `SKILL.md` plus on-demand `references/`. The `evals/` directory is a sibling harness, not a shipped skill.
 
 ## Run-dir layout
 
-Single-stage and multi-stage runs share the same conventions; `stages/` is always present (single-stage runs get exactly one entry). Full layout in [`skills/senate/references/workspace.md`](skills/senate/references/workspace.md).
-
 ```
 .senate/runs/<id>/
-  agenda.md            # the plan, with revisions log
-  context.md           # shared scratchpad (delta-only) — every agent reads each turn
-  transcript.jsonl     # canonical per-turn record (failure facts live here as `error` codes)
-  state.json           # run status, used for resume
-  notes.md             # single user-facing summary (meeting-note writes this)
+  agenda.md            # the plan
+  context.md           # shared scratchpad (delta-only)
+  transcript.jsonl     # canonical per-turn record (errors live here as codes)
+  state.json           # status, used for resume
+  notes.md             # single user-facing summary
   bindings.json        # multi-stage only
   agents/
-    moderator.md       # moderator's governance log
-    <cli>.md           # per-CLI private memory across turns
-  stages/
-    <n>-<name>/
-      verdict.md       # synthesis content (bindings target)
-      turns/
-        <NNN>-<cli>-<role>/   # one dir per turn, written by the per-turn subagent
-          prompt.derived.md
-          stdout.log   # always present; may be empty on failure
-          stderr.log   # only if non-empty
-          reply.md
+    moderator.md       # governance log
+    <cli>.md           # per-CLI private memory
+  stages/<n>-<name>/
+    verdict.md
+    turns/<NNN>-<cli>-<role>/
+      prompt.derived.md
+      stdout.log       # always present (may be empty on failure)
+      stderr.log       # only if non-empty
+      reply.md
 ```
+
+Single-stage runs get exactly one `stages/` entry. Full schema in [`skills/senate/references/workspace.md`](skills/senate/references/workspace.md).
 
 ## Evaluating
 
-`evals/` runs fixture debates end-to-end and grades them on two tiers: deterministic schema/contract checks against the run-dir layout, plus LLM judges (notes, agenda, transcript-quality, pairwise) invoked via the Claude CLI. No API key required — the judges use your Claude Code OAuth session.
+`evals/` runs fixture debates end-to-end and grades them on two tiers: deterministic schema/contract checks against the run-dir, plus LLM judges (notes, agenda, transcript-quality) invoked via `claude -p`. A separate `pairwise` judge does A/B comparisons between two completed runs of the same fixture (counterbalanced for position bias) — used explicitly when comparing skill edits, not as a default fixture rubric. No API key needed — judges use your Claude Code OAuth.
 
 ```bash
-# Run all fixtures (default models: sonnet 4.6 orchestrator, opus 4.7 judge)
-evals/run.sh
-
-# Run the smoke fixture without Claude quota dependency
-evals/run.sh --orchestrator-cli codex --judge-cli codex \
-  --orchestrator-model gpt-5.4-mini --judge-model gpt-5.4-mini \
-  --force-roster-cli codex fixtures/_smoke-parliament.md
-
-# One fixture
-evals/run.sh evals/fixtures/parliament-migration.md
-
-# Smoke test (cheapest, no kimi/gemini dependency)
-evals/run.sh evals/fixtures/_smoke-parliament.md
-
-# Roll up the scorecard
-python3 evals/scripts/report.py
+evals/run.sh                                          # all fixtures
+evals/run.sh evals/fixtures/_smoke-parliament.md      # cheapest fixture
+python3 evals/scripts/report.py                       # rollup
 ```
 
-Scorecard rows record `repo_commit`, `fixture_sha256`, and `claude_cli_version` so runs are reproducible. Stub-CLI replay mode is available for fast CI runs (see `evals/SKILL.md`). Methodology follows [Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
+Scorecard rows record `repo_commit`, `fixture_sha256`, and `claude_cli_version` for reproducibility. Stub-CLI replay is available for fast CI; methodology follows [Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
 
-## Adding a format or CLI
+## Extending
 
-- **New CLI**: drop `skills/invoke-agent/references/<name>.md` following one of the existing CLI files as a template.
-- **New primitive format**: add `skills/debate-agenda/formats/<name>.md` only when the new playbook owns an interaction-contract axis no existing primitive owns, then add a row to `skills/debate-agenda/formats/README.md` (primitives table).
-- **New multi-stage pipeline**: add a recipe to `skills/debate-agenda/references/stages.md`, then add a row to `skills/debate-agenda/formats/README.md` (pipelines table). Pipeline stages should point at existing primitive files.
+- **New CLI** — drop `skills/invoke-agent/references/<name>.md` modeled on an existing file.
+- **New primitive format** — add `skills/debate-agenda/formats/<name>.md` *only* when it owns an interaction-contract axis no existing primitive owns; then add a row to `formats/README.md`.
+- **New pipeline** — add a recipe to `skills/debate-agenda/references/stages.md` referencing existing primitives, and a row to `formats/README.md`.
 
 No code to write. Markdown all the way down.
 
 ## Roadmap
 
-See [`dev/PRODUCT.md`](dev/PRODUCT.md) for the full vision and horizon plan.
+See [`dev/PRODUCT.md`](dev/PRODUCT.md) for the vision, design principles, and H0–H7 horizon plan.
 
-## Requirements
+## References
 
-- A host agent that supports the [Agent Skills spec](https://agentskills.io). The skills CLI auto-detects 43+ agents (Claude Code, Codex, Cursor, OpenCode, Gemini CLI, Continue, …) and installs into the right directory for each.
-- The CLIs you want to include in debates installed and authenticated on your system. Each `skills/invoke-agent/references/<cli>.md` file has an install check you can copy-paste.
+Theoretical foundations this skill bundle builds on.
+
+Multi-agent debate as an LLM technique:
+
+- Du et al. 2023, *Improving Factuality and Reasoning in Language Models through Multiagent Debate* — [arXiv:2305.14325](https://arxiv.org/abs/2305.14325)
+- Liang et al. 2023, *Encouraging Divergent Thinking in Large Language Models through Multi-Agent Debate* — [arXiv:2305.19118](https://arxiv.org/abs/2305.19118)
+- Chan et al. 2023, *ChatEval: Towards Better LLM-based Evaluators through Multi-Agent Debate* — [arXiv:2308.07201](https://arxiv.org/abs/2308.07201)
+- Khan et al. 2024, *Debating with More Persuasive LLMs Leads to More Truthful Answers* — [arXiv:2402.06782](https://arxiv.org/abs/2402.06782)
+
+Single-agent precursors and limits of debate:
+
+- Wang et al. 2022, *Self-Consistency Improves Chain of Thought Reasoning in Language Models* — [arXiv:2203.11171](https://arxiv.org/abs/2203.11171). The single-agent precursor — sampling multiple reasoning paths from one model — that debate generalizes across models.
+- Wang et al. 2024, on the limits of multi-agent discussion vs. strong single-agent prompting — [arXiv:2402.18272](https://arxiv.org/abs/2402.18272). Frames when debate is worth the cost.
+
+Adjacent foundations for multi-agent LLM systems:
+
+- Park et al. 2023, *Generative Agents: Interactive Simulacra of Human Behavior* — [arXiv:2304.03442](https://arxiv.org/abs/2304.03442). Role-playing agents under structured protocols.
 
 ## License
 

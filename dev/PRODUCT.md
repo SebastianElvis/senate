@@ -14,6 +14,7 @@ The product is a growing library of these protocols, packaged as agent skills, r
 
 ## Why now
 
+- **Multi-agent debate is established science.** [Du et al. 2023](https://arxiv.org/abs/2305.14325), [Liang et al. 2023](https://arxiv.org/abs/2305.19118), [Chan et al. 2023 (ChatEval)](https://arxiv.org/abs/2308.07201), and [Khan et al. 2024](https://arxiv.org/abs/2402.06782) have each shown that structured disagreement among LLMs improves factuality, reasoning, evaluation quality, and truthfulness over single-model baselines. The research validates the *mechanism*; the open question is the *protocol library* — and that's a markdown problem, not a research problem.
 - **Skills as a substrate.** The [Agent Skills spec](https://agentskills.io) and `npx skills` distribution mean coordination patterns can ship as pure markdown, installable in one command, compatible across 40+ agents. Before this, cross-agent orchestration needed a runtime. Now it needs a README.
 - **Multiple credible CLIs.** Codex, Gemini, Cursor, Kimi, Claude each have genuine strengths and failure modes. The value of a second opinion is higher when the second opinion is *different*, not a checkpoint of the same base model.
 - **The "which model is best?" question is dissolving.** It's increasingly clear the right unit is not *model* but *ensemble under a protocol*. `senate` is the library of protocols.
