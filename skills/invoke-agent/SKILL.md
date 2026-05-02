@@ -39,7 +39,7 @@ Every CLI playbook follows the same schema so you can read them interchangeably:
   <prompt body>
   PROMPT
   ```
-- **Capture stdout to a log file** under `.senate/runs/<id>/agents/<cli>.<turn>.log`. Tee if you also want it inline.
+- **Capture stdout to a log file** under `.senate/runs/<id>/agents/<cli>.<turn>.log`. Tee if you also want it inline. If you also redirect stderr to a sibling `<cli>.<turn>.stderr`, **delete whichever of the pair ends up empty** — clean runs leave `.stderr` empty, hard failures leave `.log` empty, and only the one with content is worth keeping in the run dir. (`[ -s file ] || rm -f file` after the call.)
 - **Read exit code.** Non-zero almost always means retry. See each CLI's "quirks" for the exceptions.
 - **Strip ANSI.** Pipe through `sed 's/\x1b\[[0-9;]*m//g'` if the CLI emits color codes even when stdout is a pipe.
 - **Timeout.** Wrap every invocation in `timeout 300` (or whatever the caller specifies) to protect against hangs.

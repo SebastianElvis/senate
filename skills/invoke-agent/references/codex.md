@@ -43,9 +43,12 @@ rm -f "$PROMPT_FILE"
 
 - Plain text to stdout by default.
 - If you need structured output, ask for a fenced `json` block in the prompt and parse it after.
-- Banner/progress lines may appear on stderr — redirect stderr separately:
+- Banner/progress lines may appear on stderr — redirect stderr separately, then drop whichever file ended up empty (in a clean run that is `.stderr`; on hard failure it is usually `.log`):
   ```bash
   codex exec ... 2>"$RUN_DIR/agents/codex.1.stderr" >"$RUN_DIR/agents/codex.1.log"
+  for f in "$RUN_DIR/agents/codex.1.log" "$RUN_DIR/agents/codex.1.stderr"; do
+    [ -s "$f" ] || rm -f "$f"
+  done
   ```
 
 ## Budget flags
