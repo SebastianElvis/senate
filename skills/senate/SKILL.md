@@ -15,10 +15,10 @@ Glossary (used throughout this skill bundle, single canonical meaning):
 - **Moderator** — the `moderate-debate` skill: runs turns from the agenda.
 - **Scribe** — the `meeting-note` skill: writes `verdict.md` + `meeting-notes.md`.
 - **Synthesizer** — the in-format role (speaker / judge / editor / arbiter / synthesizer) that produces a single stage's synthesis content. Distinct from the scribe.
-- **Format** — the umbrella term for any debate playbook in `../debate-agenda/formats/`.
+- **Format** — a primitive debate playbook in `../debate-agenda/formats/`.
 - **Primitive** — a single-stage format (parliament, court, panel, workshop, brainstorm).
 - **Preset** — a named configuration of a primitive that is a closed family (e.g., `court:appeals-court`, `panel:rfc`, `workshop:committee`).
-- **Pipeline** — a multi-stage format (rfc-pipeline, design-review, …) declared with `mode: pipeline`.
+- **Pipeline** — a multi-stage agenda recipe (rfc-pipeline, design-review, …) expanded by `debate-agenda` with `mode: pipeline`.
 - **Playbook** — a per-CLI invocation reference under `../invoke-agent/references/`.
 - **Run** — one execution; lives at `<cwd>/.senate/runs/<id>/`.
 
