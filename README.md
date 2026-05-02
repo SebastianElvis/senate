@@ -4,7 +4,18 @@ Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, k
 
 ## Install
 
-The canonical entry point is the [skills CLI](https://github.com/vercel-labs/skills):
+### Claude Code (plugin)
+
+This repo is also a [Claude Code plugin](https://code.claude.com/docs/en/discover-plugins). From inside Claude Code:
+
+```
+/plugin marketplace add SebastianElvis/senate
+/plugin install senate@senate
+```
+
+### skills CLI
+
+The cross-agent entry point is the [skills CLI](https://github.com/vercel-labs/skills):
 
 ```bash
 npx skills add SebastianElvis/senate

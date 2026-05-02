@@ -1,0 +1,17 @@
+{
+  "name": "senate",
+  "owner": {
+    "name": "SebastianElvis",
+    "url": "https://github.com/SebastianElvis"
+  },
+  "plugins": [
+    {
+      "name": "senate",
+      "source": "./",
+      "description": "Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats to reach more robust answers than any single model.",
+      "version": "0.1.0",
+      "category": "orchestration",
+      "keywords": ["debate", "multi-agent", "orchestration", "skills"]
+    }
+  ]
+}
