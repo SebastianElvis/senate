@@ -60,3 +60,7 @@ PROMPT
 - Headless `claude` may try to read project files when it sees path-like strings. For debate turns, pass `--permission-mode plan` or explicitly instruct **"Do not use Read, Edit, or Bash tools. Reply in text only."** to keep it a pure reasoner.
 - If the calling process is also Claude Code, you are nesting the CLI. Set `CLAUDE_CODE_NESTED=1` to avoid session-file collisions, or run in a temp cwd.
 - Streaming JSON emits one event per line; parse incrementally or join before jq.
+
+## See also
+
+- For authoring or reviewing Agent Skills *via* `claude -p` (spec essentials, best practices, description optimization): load `references/skill-authoring.md`. **Only load it when the artifact under review is a skill** — it is irrelevant context for ordinary debate turns.

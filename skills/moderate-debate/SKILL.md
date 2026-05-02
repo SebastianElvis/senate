@@ -1,6 +1,7 @@
 ---
 name: moderate-debate
-description: Drives a multi-agent debate from a planned agenda — invokes each CLI per turn, maintains the shared transcript and context, enforces output contracts and budget caps, handles failures, manages checkpoints, and adapts the agenda mid-run when the situation diverges from the plan. Use when senate has an agenda.md and needs the actual turns run.
+description: Drives a multi-agent debate from a planned agenda — invokes each CLI per turn, maintains the shared transcript and context, enforces output contracts and budget caps, handles failures, manages checkpoints, and adapts the agenda mid-run when the situation diverges from the plan. Use this skill when senate has an `agenda.md` ready and needs the actual turns run, or when resuming a paused or stalled debate run.
+license: MIT
 ---
 
 # moderate-debate — run the debate from an agenda
@@ -92,6 +93,20 @@ The agenda is the plan, not a script. When reality diverges, decide whether to:
 - **Call back to `debate-agenda` for a re-plan** — the situation has changed in a way the plan didn't anticipate (user changed direction, an agent kept refusing across stages, a checkpoint was rejected with a request for new structure). Pass: prior agenda, recent transcript slice, the reason. Receive: revised agenda. Resume at the next unfinished stage.
 
 The bias should be toward continuing; only escalate when continuing would clearly produce a worse run.
+
+#### Plan-validate-execute gate for destructive transitions
+
+For any transition that mutates `agenda.md`, `state.json`, or already-written stage verdicts — specifically: **roster swap mid-run, format swap, stage insertion or deletion, abort, resume-from-revise, or re-plan callback** — do not mutate in place. Run this gate first:
+
+1. **Plan.** Write the intended mutation as a single self-describing block (e.g., diff of the agenda's `## Stages` section, or the exact `state.json` field changes, plus a one-line reason).
+2. **Validate.** Check the plan against:
+   - `agenda-schema` (every `cli` resolves to a playbook; every `format` resolves to a format file; every `input_bindings` references an earlier stage's `output_bindings`).
+   - The `state.json` schema in `../senate/references/workspace.md`.
+   - Invariants: no rewriting of completed stages' verdicts; no breaking the append-only `transcript.jsonl`; no skipping a `required` checkpoint.
+   - For a re-plan callback: the planner's revised agenda passes the same pre-flight checks as step 1 above.
+3. **Execute.** Apply the mutation. For agenda changes, **the planner is the only writer of `agenda.md`** — call it back rather than editing the file yourself, and append a `## Revisions` entry. For `state.json`, write atomically (temp file + rename). For abort, persist the abort reason in `state.json` before pausing.
+
+If any validation step fails, do not execute. Surface to the user via `senate` with the plan and the failed check.
 
 ### 6. Stage completion
 

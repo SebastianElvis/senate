@@ -1,6 +1,7 @@
 ---
 name: debate-agenda
-description: Plans the agenda for a multi-agent debate — picks the format, picks the roster, sequences stages, resolves sub-debate composition, and asks the user for clarification when the request is ambiguous. Use when the senate skill is told to prepare an agenda before debating, or when the user asks "which format should I use for X?" or "how should we structure this debate?".
+description: Plans the agenda for a multi-agent debate — picks the format, picks the roster, sequences stages, resolves sub-debate composition, and asks the user for clarification when the request is ambiguous. Use this skill when the senate orchestrator needs an agenda before debating, when the user asks "which format should I use for X?" or "how should we structure this debate?", or when the user describes a multi-step decision (e.g., "draft an RFC, have it reviewed, then vote") that needs stages laid out.
+license: MIT
 ---
 
 # debate-agenda — plan the debate before running it
@@ -77,6 +78,23 @@ Return to the caller (usually `senate`):
 `moderate-debate` may call back here when the situation diverges from the plan — e.g., a CLI keeps refusing, the format's termination condition fires unexpectedly, the user changes their mind. Inputs in that case: prior `agenda.md` + recent transcript slice + reason. Output: a revised `agenda.md` with a new `## Revisions` entry recording what changed and why, and the agenda's `status` field set back to `ready` so the moderator can resume immediately.
 
 The planner only writes to `agenda.md` (the agenda's `status` field). It does not touch the run's `state.json` (the run's `status` field) — that file is the moderator's responsibility, and the moderator clears any `revising` state on `state.json` once the new agenda is in hand. The moderator picks up from the next unfinished stage.
+
+## Reference loading rules
+
+Load each file **only** when the trigger condition fires. Loading everything up front wastes context and surfaces irrelevant guidance.
+
+| File | Load when |
+| --- | --- |
+| `references/agenda-schema.md` | Always, before writing `agenda.md` (step 6). |
+| `references/format-selection.md` | Format is unspecified or ambiguous (step 2). Skip if the user named a format. |
+| `references/stages.md` | Multi-stage agenda — sequencing or binding work (step 4). Skip for single-stage. |
+| `references/composition.md` | A role is filled by a sub-debate ("a jury that's itself a consensus"). Skip otherwise. |
+| `references/branching.md` | Two or more sub-pipelines run in parallel before a join. Skip otherwise. |
+| `references/clarification.md` | Step 1 indicates a clarifying question is needed. Skip if the request is already complete. |
+| `formats/<name>.md` | Exactly one per stage: the format file you have chosen. Do not pre-load the whole library. |
+| `formats/README.md` | Browsing the catalogue when no format clearly fits. Skip once a format is chosen. |
+| `../moderate-debate/references/budget.md` | Step 5, only if a stage needs a non-default budget. |
+| `../moderate-debate/references/checkpoints.md` | Step 5, only if any stage needs a checkpoint. |
 
 ## Files in this skill
 
