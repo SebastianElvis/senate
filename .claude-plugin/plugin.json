@@ -1,0 +1,12 @@
+{
+  "name": "senate",
+  "version": "0.1.0",
+  "description": "Multi-agent debate skills for coding CLIs. Orchestrates codex, gemini, cursor, kimi, and claude through structured debate formats (parliament, court, consensus, …) to reach more robust answers than any single model.",
+  "author": {
+    "name": "SebastianElvis"
+  },
+  "homepage": "https://github.com/SebastianElvis/senate",
+  "repository": "https://github.com/SebastianElvis/senate",
+  "license": "MIT",
+  "keywords": ["debate", "multi-agent", "orchestration", "skills"]
+}
