@@ -8,6 +8,8 @@ A bundle of **Agent Skills** ([agentskills.io spec](https://agentskills.io/speci
 
 There are no lint/test/build commands. Validation is conformance to the Agent Skills spec — use [`skills-ref validate ./skills/<name>`](https://github.com/agentskills/agentskills/tree/main/skills-ref) on any skill you change.
 
+For background on skill design, see [The Complete Guide to Building Skills for Claude](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf).
+
 ## Architecture
 
 Five skills compose a debate lifecycle. Reading any one skill in isolation is misleading — the lifecycle is the architecture.
