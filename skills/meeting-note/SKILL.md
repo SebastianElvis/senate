@@ -40,7 +40,7 @@ You are the only writer of the top-level `verdict.md`. Schema in `references/ver
 - **Single-stage runs:** read the synthesizer turn's structured output and prose from `transcript.jsonl`, package them into the canonical verdict shape.
 - **Multi-stage runs:** stitch each stage's `stages/<N>-<name>/verdict.md` (written by the moderator) into a top-level verdict. Each stage's own verdict file stays where it is; your job is the connective tissue.
 
-Format files (parliament, court, …) sometimes say "the speaker writes verdict.md" — that wording refers to the synthesis turn's *content production*, not to who writes the canonical top-level file. The moderator never writes top-level `verdict.md`.
+Primitive files (parliament, court, panel, workshop, brainstorm) sometimes say "the speaker writes verdict.md" — that wording refers to the synthesis turn's *content production*, not to who writes the canonical top-level file. The moderator never writes top-level `verdict.md`.
 
 ### `<run-dir>/meeting-notes.md`
 
@@ -88,7 +88,7 @@ Keep the notes scannable: a busy user reading only the TL;DR and the Decision se
 
 ### 6. (Optional) emit action items
 
-If the debate's format implies follow-up work (a `committee` produced an ADR that needs to be filed; a `red-team` produced findings that need tickets; a `consensus` produced a spec that needs implementing), include an `## Action items` section with concrete next steps.
+If the debate's format implies follow-up work (a `workshop:committee` produced an ADR that needs to be filed; a `court:red-team` produced findings that need tickets; a `workshop:consensus` produced a spec that needs implementing), include an `## Action items` section with concrete next steps.
 
 Don't fabricate action items for formats that don't imply any (a `parliament` resolving an open question doesn't necessarily produce action items).
 

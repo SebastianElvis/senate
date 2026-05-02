@@ -26,7 +26,8 @@ mode: pipeline
 stages:
   - index: 1
     name: draft
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: "{author}" }
       - { role: editor, cli: "{author}" }
@@ -36,7 +37,8 @@ stages:
 
   - index: 2
     name: review
-    format: rfc
+    format: panel
+    preset: rfc
     roster:
       - { role: author, cli: "{author}" }
       - { role: commenter, cli: "{reviewers[0]}" }
@@ -53,7 +55,8 @@ stages:
 
   - index: 3
     name: synthesize
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: "{author}" }
       - { role: editor, cli: "{editor}" }

@@ -24,7 +24,8 @@ mode: pipeline
 stages:
   - index: 1
     name: explore
-    format: oracle
+    format: panel
+    preset: oracle
     roster:
       - { role: questioner, cli: "{lead}" }
       - { role: expert, cli: "{experts[0]}" }
@@ -38,7 +39,8 @@ stages:
 
   - index: 2
     name: draft
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: "{lead}" }
       - { role: editor, cli: "{lead}" }
@@ -52,7 +54,8 @@ stages:
     parallel: true
     branches:
       - name: peer-review
-        format: peer-review
+        format: panel
+        preset: peer-review
         roster:
           - { role: author, cli: "{lead}" }
           - { role: reviewer, cli: "{reviewers[0]}" }
@@ -64,7 +67,8 @@ stages:
           - { name: pr_verdict, source: "verdict.md body" }
           - { name: pr_decision, source: "fenced-json.decision" }
       - name: red-team
-        format: red-team
+        format: court
+        preset: red-team
         roster:
           - { role: attacker, cli: "{reviewers[0]}" }
           - { role: attacker, cli: "{reviewers[1]}" }
@@ -80,7 +84,8 @@ stages:
 
   - index: 4
     name: synthesize
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: "{lead}" }
       - { role: editor, cli: "{lead}" }

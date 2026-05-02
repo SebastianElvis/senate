@@ -88,14 +88,17 @@ def extract_task(body: str) -> str:
 
 def build_orchestrator_prompt(fm: dict, task: str) -> str:
     fmt = fm.get("format")
+    preset = fm.get("preset")
     roster_lines = "\n".join(
         f"  - {r['role']}: {r['cli']}" for r in fm.get("roster", [])
     )
     rounds = fm.get("rounds") or fm.get("max_rounds") or 2
+    preset_line = f"- Preset: {preset}\n" if preset else ""
     return f"""Use the `senate` skill to run a debate on the task below. Produce verdict.md and meeting-notes.md as the skill defines.
 
 Use these settings (the user has already chosen them; do not re-plan):
 - Format: {fmt}
+{preset_line}\
 - Roster (role: cli):
 {roster_lines}
 - Rounds: {rounds}

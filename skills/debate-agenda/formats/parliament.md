@@ -1,8 +1,29 @@
 # parliament
 
+## Defining commitment
+
+Outcome is determined by **aggregation of individual votes**, not by an arbiter's judgment. Participants optimize for coalition-building, persuasion under known aggregation, and explicit dissent accounting. Each agent represents a viewpoint (pro, con, neutral, or custom parties), exchanges opening statements and rebuttals, then votes. A designated **speaker** tallies votes and writes the verdict.
+
+Parliament is the only primitive that closes by tally. (Vote-vs-ruling is a behavioral axis, not just a terminal mechanism — folding it into court would lose the coalition dynamic.)
+
+## Boundary conditions
+
+- At least 2 MPs (typically 3+); each MP represents a viewpoint and is committed to vote.
+- Exactly one speaker, who tallies and synthesizes but does not argue or vote (except as tiebreaker).
+- Output is a verdict-with-tally and explicit dissent.
+
+## Anti-drift fence
+
+| If the task is… | The right primitive is… |
+| --- | --- |
+| "Sides argue with an arbiter" | court |
+| "Independent panel of experts" | panel |
+| "Peers co-author a draft" | workshop |
+| "Generate options" | brainstorm |
+
 ## Summary
 
-Multi-party debate where each agent represents a viewpoint (pro, con, neutral, or custom parties), exchanges opening statements and rebuttals, then votes. A designated **speaker** tallies votes and writes the verdict. Best for open questions where you want diversity of perspective rather than a single winning argument.
+Best for open questions where you want diversity of perspective rather than a single winning argument.
 
 ## Roles
 

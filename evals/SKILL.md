@@ -52,6 +52,7 @@ Each fixture lives in `fixtures/<id>.md`. Frontmatter declares the canned setup;
 ---
 fixture_id: parliament-migration
 format: parliament
+preset: null
 roster:
   - {role: mp_pro, cli: codex}
   - {role: mp_con, cli: gemini}
@@ -72,6 +73,8 @@ judge_rubrics: [verdict, agenda, meeting_notes]
 <human-readable bullets — for documentation; the machine-checkable form is the `assertions:` block>
 ```
 
+`preset` is required for closed-family primitives (`court`, `panel`, `workshop`) and omitted or null for `parliament` and `brainstorm`.
+
 ### Assertion rule kinds
 
 Supported in `assertions:`:
@@ -88,13 +91,13 @@ For anything more nuanced, use an LLM judge.
 
 ## Fixtures shipped
 
-| Fixture | Format | Tests |
-| --- | --- | --- |
-| `parliament-migration.md` | parliament | Open policy question; vote tally + dissent |
-| `court-pr-review.md` | court | Adversarial review; numbered objections |
-| `consensus-api-design.md` | consensus | Convergence on artifact |
-| `peer-review-rfc.md` | peer-review | Blind reviewer comments + editor decision |
-| `red-team-auth.md` | red-team | Attacker/defender numbered exchanges |
+| Fixture | Format | Preset | Tests |
+| --- | --- | --- | --- |
+| `parliament-migration.md` | parliament | — | Open policy question; vote tally + dissent |
+| `court-pr-review.md` | court | court | Adversarial review; numbered objections |
+| `consensus-api-design.md` | workshop | consensus | Convergence on artifact |
+| `peer-review-rfc.md` | panel | peer-review | Blind reviewer comments + editor decision |
+| `red-team-auth.md` | court | red-team | Attacker/defender numbered exchanges |
 
 Capability set today. Once a format hits ≥95% pass@3 across its fixtures (the H1 quality bar from `dev/PRODUCT.md`), we promote those fixtures to a `fixtures/regression/` set.
 
@@ -180,7 +183,7 @@ A run is `pass: true` only if `deterministic.deterministic_pass` is true AND eve
 
 ## Adding a fixture
 
-1. Copy a similar fixture; edit `fixture_id`, `format`, `roster`, task body.
+1. Copy a similar fixture; edit `fixture_id`, `format`, `preset` when required, `roster`, task body.
 2. Encode any structural expectations as `assertions:` in the frontmatter (use the rule kinds above).
 3. Pick the relevant `judge_rubrics`. Default is `[verdict]` only.
 4. Add a one-row entry to the "Fixtures shipped" table in this file.

@@ -26,7 +26,8 @@ mode: pipeline
 stages:
   - index: 1
     name: reconstruct
-    format: oracle
+    format: panel
+    preset: oracle
     roster:
       - { role: questioner, cli: "{lead}" }
       - { role: expert, cli: "{witnesses[0]}" }
@@ -40,7 +41,8 @@ stages:
 
   - index: 2
     name: root-causes
-    format: red-team
+    format: court
+    preset: red-team
     roster:
       - { role: attacker, cli: "{attackers[0]}" }
       - { role: attacker, cli: "{attackers[1]}" }
@@ -55,7 +57,8 @@ stages:
 
   - index: 3
     name: remediations
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: "{lead}" }
       - { role: editor, cli: "{lead}" }

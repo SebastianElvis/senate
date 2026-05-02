@@ -1,18 +1,19 @@
 ---
 fixture_id: red-team-auth
-format: red-team
+format: court
+preset: red-team
 roster:
   - {role: attacker, cli: codex}
   - {role: defender, cli: claude}
-  - {role: arbiter, cli: gemini}
-rounds: 3
+  - {role: judge, cli: gemini}
+rounds: 1
 assertions:
-  - {kind: section_present, section: Attacks attempted}
-  - {kind: section_present, section: Mitigations}
-  - {kind: section_present, section: Residual risks}
-  - {kind: section_regex, section: Attacks attempted, pattern: "^\\s*\\d+\\.", min_count: 3}
-  - {kind: section_regex, section: Mitigations, pattern: "^\\s*\\d+\\.", min_count: 3}
-  - {kind: section_contains_one_of, section: Verdict, values: ["safe", "unsafe", "needs work"]}
+  - {kind: section_present, section: Ruling}
+  - {kind: section_present, section: Strongest attacks}
+  - {kind: section_present, section: Effective defenses}
+  - {kind: section_present, section: Outstanding risks}
+  - {kind: section_regex, section: Strongest attacks, pattern: "^\\s*\\d+\\.", min_count: 2}
+  - {kind: section_contains_one_of, section: Ruling, values: ["survives", "survives_with_mitigations", "fails"]}
 judge_rubrics: [verdict, transcript_quality]
 ---
 
@@ -25,14 +26,14 @@ Audit the following authentication scheme for a public API:
 - The server compares the token against the DB row using a plain `WHERE token = $1` query.
 - Tokens never rotate; users can request a manual reset by emailing support.
 
-The attacker enumerates concrete attacks (numbered list, ≥3). The defender proposes mitigations (numbered list, ≥3, addressing the attacker's points by number). The arbiter rules `safe`, `unsafe`, or `needs work`, with residual risks documented.
+The attacker enumerates concrete failure modes (numbered list, ≥3). The defender classifies each as non-applicable, accepted, mitigated, or unresolved. The judge rules `survives`, `survives_with_mitigations`, or `fails`, with outstanding risks documented.
 
 # Expected verdict shape
 
-- `## Attacks attempted` is a numbered list with at least 3 items.
-- `## Mitigations` is a numbered list with at least 3 items, each tying back to one or more attacks.
-- `## Residual risks` is non-empty.
-- `## Verdict` is one of `safe`, `unsafe`, `needs work`.
+- `## Ruling` is one of `survives`, `survives_with_mitigations`, `fails`.
+- `## Strongest attacks` lists at least 2 concrete failure modes.
+- `## Effective defenses` explains which defenses resolved an attack.
+- `## Outstanding risks` is present and documents unresolved or weakly mitigated attacks.
 
 # Notes
 

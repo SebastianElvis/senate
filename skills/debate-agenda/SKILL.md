@@ -105,7 +105,7 @@ Load each file **only** when the trigger condition fires. Loading everything up 
 - `references/branching.md` — parallel sub-pipelines.
 - `references/clarification.md` — when and how to ask the user.
 - `references/agenda-schema.md` — the on-disk schema for `agenda.md`.
-- `formats/<name>.md` — format playbook library. Single-stage primitives (parliament, court, consensus, committee, peer-review, brainstorm, oracle, socratic, appeals-court, rfc, red-team) and multi-stage pipelines (rfc-pipeline, design-review, bill-to-law, incident-post-mortem) live side by side. Multi-stage files declare `mode: pipeline` in their frontmatter.
+- `formats/<name>.md` — format playbook library. Five single-stage primitives (parliament, court, panel, workshop, brainstorm) — court / panel / workshop are closed families with named presets (e.g., `court:appeals-court`, `panel:oracle`, `workshop:committee`). Multi-stage pipelines (rfc-pipeline, design-review, bill-to-law, incident-post-mortem) live side by side; pipeline files declare `mode: pipeline` in their frontmatter.
 
 ## Related skills
 

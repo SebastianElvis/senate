@@ -16,7 +16,8 @@ Glossary (used throughout this skill bundle, single canonical meaning):
 - **Scribe** — the `meeting-note` skill: writes `verdict.md` + `meeting-notes.md`.
 - **Synthesizer** — the in-format role (speaker / judge / editor / arbiter / synthesizer) that produces a single stage's synthesis content. Distinct from the scribe.
 - **Format** — the umbrella term for any debate playbook in `../debate-agenda/formats/`.
-- **Primitive** — a single-stage format (parliament, court, …).
+- **Primitive** — a single-stage format (parliament, court, panel, workshop, brainstorm).
+- **Preset** — a named configuration of a primitive that is a closed family (e.g., `court:appeals-court`, `panel:rfc`, `workshop:committee`).
 - **Pipeline** — a multi-stage format (rfc-pipeline, design-review, …) declared with `mode: pipeline`.
 - **Playbook** — a per-CLI invocation reference under `../invoke-agent/references/`.
 - **Run** — one execution; lives at `<cwd>/.senate/runs/<id>/`.
@@ -43,7 +44,7 @@ If the user just wants one model's answer, **do not use this skill** — call th
 ## Inputs
 
 1. **Task** — the question or artifact to debate.
-2. **Format** (optional) — parliament, court, consensus, etc. If unspecified, the planner will choose.
+2. **Format** (optional) — parliament, court, panel, workshop, brainstorm; plus a preset where applicable (e.g., `court:red-team`, `panel:oracle`, `workshop:committee`). If unspecified, the planner will choose.
 3. **Roster** (optional) — which CLIs participate. Default: `codex, gemini, claude`.
 4. **Multi-stage hint** (optional) — pipeline language ("draft, then review") triggers multi-stage planning.
 5. **`prepare_agenda`** (option) — `auto` (default) | `true` | `false`.

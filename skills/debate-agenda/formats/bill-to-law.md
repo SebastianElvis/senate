@@ -25,7 +25,8 @@ mode: pipeline
 stages:
   - index: 1
     name: draft-bill
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: "{sponsor}" }
       - { role: editor, cli: "{sponsor}" }
@@ -36,7 +37,8 @@ stages:
 
   - index: 2
     name: public-comment
-    format: rfc
+    format: panel
+    preset: rfc
     roster:
       - { role: author, cli: "{sponsor}" }
       - { role: commenter, cli: "{public[0]}" }
@@ -69,7 +71,8 @@ stages:
 
   - index: 4
     name: final-form
-    format: committee
+    format: workshop
+    preset: committee
     roster:
       - { role: member, cli: "{sponsor}" }
       - { role: editor, cli: "{sponsor}" }
