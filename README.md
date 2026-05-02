@@ -131,7 +131,7 @@ Sequence of execution for a single run:
 | Skill | Purpose |
 | --- | --- |
 | `senate` | Top-level entry. Mints the run dir and routes through the three lifecycle skills. |
-| `debate-agenda` | Plans the debate. Picks the format, picks the roster, sequences multi-stage pipelines, resolves composed (sub-debate) roles, asks for clarification when the request is ambiguous. Hosts the format library at `formats/` (single-stage primitives + multi-stage pipelines side by side). |
+| `debate-agenda` | Plans the debate. Picks the format, picks the roster, sequences multi-stage pipelines, resolves composed (sub-debate) roles, asks for clarification when the request is ambiguous. Hosts primitive formats at `formats/` and pipeline recipes in `references/stages.md`. |
 | `moderate-debate` | Runs the debate from the agenda. Drives turns, enforces output contracts, manages shared and private context, handles failures, manages checkpoints, calls back to `debate-agenda` for mid-run re-plans. |
 | `meeting-note` | Consolidates the run. Reads agenda + transcript + context + per-stage verdicts; writes `verdict.md` and `meeting-notes.md`. |
 | `invoke-agent` | Per-CLI invocation playbook (codex, gemini, cursor, kimi, claude). Used by `moderate-debate`. |
@@ -147,7 +147,7 @@ In your coding agent, ask for a debate in plain language:
 - *"Drive **consensus** between three models on this API design."*
 - *"**Red-team** this deployment plan — find failure modes."*
 - *"**Peer-review** this design doc."*
-- *"Run an RFC pipeline on this spec."* (multi-stage agenda — debate-agenda picks the `rfc-pipeline` template)
+- *"Run an RFC pipeline on this spec."* (multi-stage agenda — debate-agenda picks the `rfc-pipeline` recipe)
 - *"Which format should I use for this?"* (debate-agenda answers without running the debate)
 
 Run artifacts land in `<cwd>/.senate/runs/<id>/` — never in this skill repo.
@@ -192,8 +192,8 @@ Scorecard rows record `repo_commit`, `fixture_sha256`, and `claude_cli_version` 
 ## Adding a format or CLI
 
 - **New CLI**: drop `skills/invoke-agent/references/<name>.md` following one of the existing CLI files as a template.
-- **New single-stage format**: drop `skills/debate-agenda/formats/<name>.md` following `skills/debate-agenda/formats/_template.md`, add a row to `skills/debate-agenda/formats/README.md` (primitives table).
-- **New multi-stage pipeline**: drop `skills/debate-agenda/formats/<name>.md` following one of the four shipped pipelines (rfc-pipeline, design-review, bill-to-law, incident-post-mortem), add a row to `skills/debate-agenda/formats/README.md` (pipelines table).
+- **New primitive format**: add `skills/debate-agenda/formats/<name>.md` only when the new playbook owns an interaction-contract axis no existing primitive owns, then add a row to `skills/debate-agenda/formats/README.md` (primitives table).
+- **New multi-stage pipeline**: add a recipe to `skills/debate-agenda/references/stages.md`, then add a row to `skills/debate-agenda/formats/README.md` (pipelines table). Pipeline stages should point at existing primitive files.
 
 No code to write. Markdown all the way down.
 

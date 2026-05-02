@@ -150,7 +150,7 @@ Two rounds of prosecution / defense, then judge ruling. Verdict: sustain | dismi
 
 ## Multi-stage with bindings — example
 
-See `../formats/rfc-pipeline.md` for a worked example.
+See `stages.md` for worked multi-stage examples, including `rfc-pipeline`.
 
 ## Revisions log
 
@@ -176,7 +176,7 @@ The frontmatter is updated to reflect the new state (e.g., the stage's roster en
 Before returning `status: ready`, the planner validates:
 
 - Every `cli` in every roster has a file at `../../invoke-agent/references/<cli>.md`.
-- Every `format` has a file at `../formats/<format>.md`.
+- Every stage `format` has a primitive file at `../formats/<format>.md`.
 - For closed-family primitives (court, panel, workshop), `preset` is set and the named preset exists in the primitive's preset table.
 - Every role named in a roster appears in that format/preset's role list.
 - Every `input_bindings` entry refers to an `output_bindings` name from an earlier stage.
