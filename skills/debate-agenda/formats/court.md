@@ -338,7 +338,7 @@ Be honest. "Unresolved" is a legitimate answer and is always preferable to hand-
 Output format: one subsection per failure mode, named by the attacker's label.
 ```
 
-Output contract: free text, one subsection per input failure mode + disposition label for each. Re-prompt once if any failure mode is unaddressed.
+Output contract: free text, one subsection per input failure mode + disposition label for each. If any failure mode is unaddressed, the per-turn subagent treats it as a contract violation and re-prompts once if the turn's retry budget is still available.
 
 #### 3. Judgment — **sequential**, single turn
 
@@ -436,6 +436,20 @@ Do not state your own opinion. Do not argue. Ask one question.
 
 Output contract: free text, must be a question.
 
+##### Contract: `socratic-question`
+
+The moderator passes this contract to the per-turn subagent for interviewer probe turns (see `../../moderate-debate/references/contracts.md` and `../../moderate-debate/SKILL.md` §4a):
+
+- **Schema** — free-text reply containing exactly one interviewer question; this validates `text` only and produces no separate `parsed_output`.
+- **Example** — `What evidence would distinguish your claim from the weaker possibility that the improvement came from caching rather than the new algorithm?`
+- **Extraction rule** — the whole reply text.
+- **Re-prompt template** — `Your previous reply did not satisfy the Socratic interviewer role. Reply now with exactly one question. Do not state your own opinion, do not argue, and do not add commentary before or after the question.`
+- **Validators**:
+  - `is_question` — after trimming whitespace, the reply ends with `?` and contains no more than two question marks total.
+  - `no_opinion_statement` — reply does not match `\b(I think|I believe|my view|the answer is|clearly|obviously|you should)\b` (case-insensitive).
+
+The per-turn subagent enforces the "ask, don't argue" rule on the same shared retry path as any other contract violation; on terminal failure, the subagent returns `error.kind = "contract_violation"` and the moderator skips that probe turn per the agent-failure fallback.
+
 Subject prompt:
 
 ```
@@ -493,4 +507,4 @@ On contract failure, fallback to `inconclusive`.
 - **Rounds**: 4. Cap at 8.
 - **Roster size**: 2 or 3.
 - **Agent failure**: missing interviewer turn = probe round skipped; if subject misses, record as forfeit and go to verdict.
-- **Style rule**: if the interviewer states opinions instead of asking questions, re-prompt once with the role brief.
+- **Style rule**: interviewer probe turns MUST use the `socratic-question` contract above. The per-turn subagent enforces the "ask, don't argue" rule on the same shared retry path as any other contract violation; on terminal failure, the subagent returns `error.kind = "contract_violation"` and the moderator skips that probe turn per the agent-failure fallback above.

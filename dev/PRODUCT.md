@@ -110,12 +110,12 @@ Most real decisions are not one debate — they are a pipeline. A bill becomes l
 
 This is the horizon that turns a library of formats into a **governance substrate** — and it's prioritized alongside H2 because most valuable real-world decisions live in pipelines, not single debates.
 
-**Design deviation from the original plan:** rather than a separate top-level "workflow" skill, pipelines are unified with single-stage formats inside `debate-agenda`. A pipeline file declares `mode: pipeline` in its frontmatter and lists stages that point at primitive format files. The planner expands either kind into the same `agenda.md`; the moderator runs each stage with its primitive's contracts. This keeps "one debate" and "many debates chained" on the same substrate and avoids a parallel workflow skill that would duplicate the run-dir contract.
+**Design deviation from the original plan:** rather than a separate top-level "workflow" skill, pipelines are unified with single-stage formats inside `debate-agenda`. A pipeline recipe lists stages that point at primitive format files. The planner expands either a primitive or a pipeline recipe into the same `agenda.md`; the moderator runs each stage with its primitive's contracts. This keeps "one debate" and "many debates chained" on the same substrate and avoids a parallel workflow skill that would duplicate the run-dir contract.
 
 **Shipped:**
 
-- **Pipelines as a first-class format kind.** `mode: pipeline` frontmatter; stages, bindings, and a `stages/<N>-<name>/` run-dir layout that captures intermediate verdicts.
-- **Canonical pipelines.** `rfc-pipeline` (committee → rfc → committee), `design-review` (oracle → committee → peer-review ‖ red-team → committee), `bill-to-law` (committee → rfc → parliament → committee), `incident-post-mortem` (oracle → red-team → committee). All four shipped under `skills/debate-agenda/formats/`.
+- **Pipelines as a first-class agenda mode.** `mode: pipeline` in `agenda.md`; stages, bindings, and a `stages/<N>-<name>/` run-dir layout that captures intermediate verdicts.
+- **Canonical pipelines.** `rfc-pipeline` (committee → rfc → committee), `design-review` (oracle → committee → peer-review ‖ red-team → committee), `bill-to-law` (committee → rfc → parliament → committee), `incident-post-mortem` (oracle → red-team → committee). All four are recipes in `skills/debate-agenda/references/stages.md`.
 - **Human-in-the-loop checkpoints.** `skills/moderate-debate/references/checkpoints.md` — pipelines can pause between stages and resume from `state.json`.
 - **Branch and merge** (basic). `design-review` runs `peer-review ‖ red-team` in parallel and merges verdicts at the next committee stage. The bindings vocabulary supports this; richer fan-out/fan-in patterns are still ad-hoc per pipeline.
 

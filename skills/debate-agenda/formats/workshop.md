@@ -150,7 +150,16 @@ Reply with a single fenced json block and nothing else:
 `dissent_point` is required only if vote is `approve_with_dissent` or `block`.
 ```
 
-Output contract: canonical `vote` (see `../../moderate-debate/references/contracts.md`), with the vote values above. Re-prompt once on failure; fallback is `approve_with_dissent` with `dissent_point: "vote failed contract"`.
+Output contract: format-specific fenced JSON with the schema shown above (a committee-local override of the canonical `vote` shape, with `approve` / `approve_with_dissent` / `block` values and a `dissent_point` field). On contract failure, the per-turn subagent re-prompts once if the turn's retry budget is still available; fallback is `approve_with_dissent` with `dissent_point: "vote failed contract"`.
+
+##### Contract: `committee-final-vote`
+
+The moderator passes this contract to the per-turn subagent for the final vote turn (see `../../moderate-debate/references/contracts.md` and `../../moderate-debate/SKILL.md` §4a):
+
+- **Schema** — fenced JSON object: `{"vote": "approve" | "approve_with_dissent" | "block", "confidence": 0.0-1.0, "dissent_point": "..."}`. `dissent_point` is required when `vote` is `approve_with_dissent` or `block`; otherwise it may be an empty string.
+- **Example** — `{"vote": "approve_with_dissent", "confidence": 0.74, "dissent_point": "Operational rollout still needs an explicit owner."}`
+- **Extraction rule** — parse the last fenced `json` block in the reply.
+- **Re-prompt template** — `Your previous reply did not match the committee final-vote contract. Reply now with ONLY one fenced json block matching: {"vote": "approve" | "approve_with_dissent" | "block", "confidence": 0.0-1.0, "dissent_point": "..."}. No prose.`
 
 #### 6. Publication — **sequential**, single turn
 

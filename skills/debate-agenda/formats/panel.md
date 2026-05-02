@@ -202,7 +202,7 @@ End with a fenced json block:
 ```
 ```
 
-Output contract: free text (review body) + fenced json block (machine-readable recommendation). Re-prompt once on failure; fallback recommendation is `major_revision`.
+Output contract: free text (review body) + fenced json block (machine-readable recommendation). The json block is the contract. On contract failure, the per-turn subagent re-prompts once if the turn's retry budget is still available; fallback recommendation is `major_revision`.
 
 #### 3. Revision — **sequential**, single turn
 
@@ -300,7 +300,21 @@ Length: whatever the task requires, but err toward complete.
 Number every paragraph in the proposal section — `¶1`, `¶2`, etc. Commenters reference these.
 ```
 
-Output contract: free text, proposal section paragraphs are numbered `¶N`. If the author doesn't number paragraphs, the moderator re-prompts once before accepting the draft.
+Output contract: free text, proposal section paragraphs are numbered `¶N`.
+
+##### Contract: `rfc-draft`
+
+The moderator passes this contract to the per-turn subagent (see `../../moderate-debate/references/contracts.md` and `../../moderate-debate/SKILL.md` §4a):
+
+- **Schema** — free-text reply with the section headings listed in the prompt template (Title, Summary, Motivation, Proposal, Open questions); this validates `text` only and produces no separate `parsed_output`.
+- **Example** — see the prompt template above.
+- **Extraction rule** — the whole reply text.
+- **Re-prompt template** — `Your previous reply did not satisfy the draft's structural rules. Required: include all five sections (Title, Summary, Motivation, Proposal, Open questions), and number every paragraph in the Proposal section with "¶<n>" (e.g., "¶1", "¶2", "¶3"). Reprint the full draft now with these rules honored.`
+- **Validators**:
+  - `sections_present` — the reply contains a heading or labeled line for each of `Title`, `Summary`, `Motivation`, `Proposal`, `Open questions` (heading level not constrained — `#`, `##`, `###`, or a `Proposal:` / `**Proposal**` line all qualify). Case-insensitive.
+  - `paragraphs_numbered` — every non-empty paragraph inside the Proposal section (whatever heading style the author chose, located via `sections_present`) begins with `¶\d+\b` as its first non-whitespace token. This enforces the paragraph-numbering rule from § Defaults.
+
+The per-turn subagent enforces these on the same shared retry path as any other contract violation; on terminal failure, the subagent returns `error.kind = "contract_violation"` and the moderator applies the format fallback.
 
 #### 2. Comment — **parallel** (strict isolation)
 
@@ -403,4 +417,4 @@ Output contract: markdown + trailing fenced json:
 - **Roster size**: 4–10.
 - **Agent failure**: missing commenters simply reduce feedback volume; rfc continues. Missing author revision = `revise_and_repost`.
 - **Blind commenting**: same rule as peer-review — commenters must not see each other's comments in phase 2.
-- **Paragraph numbering**: enforced in phase 1 (re-prompt once if missing).
+- **Paragraph numbering**: enforced in phase 1 by the `rfc-draft` contract's `paragraphs_numbered` validator (see § Phases · 1. Draft). The per-turn subagent enforces it on the same shared retry path as any other contract violation; on terminal failure, the subagent returns `error.kind = "contract_violation"` and the moderator applies the format fallback.

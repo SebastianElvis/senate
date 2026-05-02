@@ -6,7 +6,7 @@
 
 ## Boundary conditions
 
-- Phase 1 is criticism-free. The moderator re-prompts once if any phase-1 reply contains critique language.
+- Phase 1 is criticism-free. The phase-1 contract's `no_critique_language` validator (enforced by the per-turn subagent) catches critique language and re-prompts once on the shared retry path.
 - At least 2 generators + facilitator. Generators produce; facilitator clusters and selects.
 - Output is a set of developed options + recommended next steps, not a ruling, not a vote, not a deliverable.
 

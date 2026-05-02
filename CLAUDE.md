@@ -29,7 +29,7 @@ Canonical role names (used everywhere — keep them consistent):
 - **Moderator** = `moderate-debate` skill. Builds turn prompts, dispatches standalone per-turn subagents, and commits their structured results.
 - **Scribe** = `meeting-note` skill. Writes the user-facing summary.
 - **Synthesizer** = the in-format role (judge/speaker/editor/arbiter) for one stage's synthesis. **Distinct from the scribe.**
-- **Format** = a debate playbook in `skills/debate-agenda/formats/`. Single-stage = "primitive"; multi-stage = "pipeline" (`mode: pipeline`).
+- **Format** = a primitive debate playbook in `skills/debate-agenda/formats/`. Multi-stage pipelines are agenda recipes in `skills/debate-agenda/references/stages.md` that sequence those primitives.
 - **Playbook** = a per-CLI invocation reference in `skills/invoke-agent/references/`, loaded by the per-turn subagent rather than the moderator's long-lived context.
 - **Run** = one execution; lives at `<cwd>/.senate/runs/<id>/`.
 
@@ -48,7 +48,7 @@ The spec recommends `SKILL.md` stay under 500 lines / 5000 tokens. Detail lives 
 ## Conventions when editing skills
 
 - **Frontmatter**: `name` must equal the parent directory name; lowercase + hyphens only; `description` ≤ 1024 chars and should describe both *what* and *when*. `license: MIT` is set on every skill.
-- **Format files** go under `skills/debate-agenda/formats/`. New single-stage formats follow `_template.md`; new pipelines follow one of `rfc-pipeline.md`, `design-review.md`, `bill-to-law.md`, or `incident-post-mortem.md`. Add a row to `formats/README.md`.
+- **Format files** go under `skills/debate-agenda/formats/` only when adding a new primitive interaction contract. New pipelines are recipes in `skills/debate-agenda/references/stages.md`; add a catalogue row to `formats/README.md`.
 - **CLI playbooks** go under `skills/invoke-agent/references/<name>.md`. Schema (install-check, invoke, input, output, budget, quirks) is shared across all CLI files — preserve it.
 - **No imperative code in skills.** If you find yourself wanting to add a script under `skills/`, first check whether the same effect can be encoded as a Markdown procedure the agent follows. The one explicit exception is `evals/scripts/` — the eval harness needs deterministic graders, scorecard accounting, and CLI invocation that an agent cannot reliably perform mid-loop. Keep new code there, not in skills.
 

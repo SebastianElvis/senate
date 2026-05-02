@@ -71,7 +71,7 @@ Lives at `<run-dir>/verdict.md`. Stitches together the per-stage verdicts (which
 
 <the artifact the pipeline produced — a draft doc, a ruling, a spec. Either inline if short, or a path to where it lives.>
 
-Each canonical pipeline declares the **inner** structure of this section in its own "Verdict shape" section (e.g., `bill-to-law` produces "Final Law Text / Vote Record / Dissent / Public Comment Summary" subsections within `## Final deliverable`). The top-level shape (Task / Run / Pipeline / Disposition / Outcome / Stage trail / Final deliverable / Open questions / Structured outcome) is fixed by this schema.
+Each canonical pipeline declares the **inner** structure of this section in `../../debate-agenda/references/stages.md` (e.g., `bill-to-law` produces "Final Law Text / Vote Record / Dissent / Public Comment Summary" subsections within `## Final deliverable`). The top-level shape (Task / Run / Pipeline / Disposition / Outcome / Stage trail / Final deliverable / Open questions / Structured outcome) is fixed by this schema.
 
 ## Open questions
 

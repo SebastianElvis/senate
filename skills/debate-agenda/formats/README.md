@@ -1,11 +1,11 @@
 # Format playbook library
 
-A reference library, not a skill. The `debate-agenda` planner picks one of these and expands it into a concrete `agenda.md`; the `moderate-debate` runner reads each stage's primitive file (and its preset) to drive its turns.
+A reference library, not a skill. The `debate-agenda` planner picks primitive playbooks from this directory and expands them into a concrete `agenda.md`; the `moderate-debate` runner reads each stage's primitive file (and its preset) to drive its turns.
 
-Two kinds of files live here:
+Only runtime primitive files live here:
 
 - **Single-stage primitives** — five files, each owning one interaction-contract axis. Some primitives are closed families with named **presets** (e.g., `court` has presets `court`, `appeals-court`, `red-team`, `socratic`). The agenda specifies `format: <primitive>` plus `preset: <name>`.
-- **Multi-stage pipelines** — a sequence of stages, each pointing at a primitive (and preset, if applicable). YAML frontmatter declares `mode: pipeline`.
+- **Pipeline recipes** are not separate format files. They are named stage sequences in `../references/stages.md`, and each stage points back to one of the five primitive files here.
 
 ## The five primitives
 
@@ -19,7 +19,7 @@ Two kinds of files live here:
 
 Each primitive owns exactly one interaction-contract axis. The presets within a primitive are configuration of that contract — not co-equal new primitives. **Closed families: arbitrary parameter combinations are undefined — pick a named preset.**
 
-Template for a new primitive: `_template.md`.
+New primitives should follow the common schema below. Add one only when the new file owns an interaction-contract axis that none of the five primitives owns.
 
 ### Preset cheatsheet
 
@@ -35,16 +35,16 @@ Template for a new primitive: `_template.md`.
 | `committee` | workshop | committee | Memos, ADRs, position papers — a single coherent voice matters |
 | `consensus` | workshop | consensus | Multiple genuine perspectives must converge without one dominating |
 
-## Multi-stage pipelines
+## Multi-stage pipeline recipes
 
-| Pipeline | File | Stage sequence | Best for |
-| --- | --- | --- | --- |
-| rfc-pipeline | `rfc-pipeline.md` | workshop:committee → panel:rfc → workshop:committee | Drafting a spec, distributed comment, finalize |
-| design-review | `design-review.md` | panel:oracle → workshop:committee → (panel:peer-review ‖ court:red-team) → workshop:committee | Technical designs needing breadth + adversarial pressure |
-| bill-to-law | `bill-to-law.md` | workshop:committee → panel:rfc → parliament → workshop:committee | Policy-shaped decisions with many stakeholders |
-| incident-post-mortem | `incident-post-mortem.md` | panel:oracle → court:red-team → workshop:committee | Blameless post-mortem: reconstruct → root cause → remediate |
+| Pipeline | Stage sequence | Best for |
+| --- | --- | --- |
+| rfc-pipeline | workshop:committee → panel:rfc → workshop:committee | Drafting a spec, distributed comment, finalize |
+| design-review | panel:oracle → workshop:committee → (panel:peer-review ‖ court:red-team) → workshop:committee | Technical designs needing breadth + adversarial pressure |
+| bill-to-law | workshop:committee → panel:rfc → parliament → workshop:committee | Policy-shaped decisions with many stakeholders |
+| incident-post-mortem | panel:oracle → court:red-team → workshop:committee | Blameless post-mortem: reconstruct → root cause → remediate |
 
-Each pipeline file declares `mode: pipeline` in frontmatter, plus stages, bindings, checkpoints, and a default roster.
+The concrete stage lists, bindings, checkpoints, defaults, and verdict shapes live in `../references/stages.md`.
 
 ## Common schema (single-stage primitives)
 
@@ -60,14 +60,14 @@ Every primitive file documents these sections in order:
    4. **Synthesis** — which role produces the synthesis content.
    5. **Defaults** — recommended rounds, roster size limits, fallback behavior.
 
-## Common schema (multi-stage pipelines)
+## Common schema (multi-stage pipeline recipes)
 
-Every pipeline file declares:
+Every pipeline recipe in `../references/stages.md` declares:
 
-- `name`, `description`, `mode: pipeline`, `default_roster`, `default_budget` in frontmatter.
-- A "Why this pipeline" prose section.
-- An "Expanded shape" YAML block listing each stage (format, preset if applicable, roster, bindings, checkpoint).
-- Failure modes and verdict shape sections.
+- When to choose the recipe.
+- Default roster and budget.
+- Expanded stage shape: format, preset if applicable, roster, bindings, checkpoint.
+- Failure modes and verdict shape.
 
 ## Picking a primitive
 
@@ -96,8 +96,8 @@ If none fits cleanly, ask the user.
 ## Adding a new entry
 
 - **New preset** under an existing primitive: open the primitive's file, add a row to its preset table, append a preset section. Verify the parameters are contract-defining (different prompts, turn rules, output schemas) — not decorative.
-- **New primitive:** copy `_template.md` to `<name>.md`, fill in the sections, add a row to the primitives table above. The new primitive must own an axis no existing primitive owns.
-- **New pipeline:** copy any of the four shipped pipelines (`rfc-pipeline.md` is the smallest), edit stages and bindings, and add a row to the pipelines table above.
+- **New primitive:** create `<name>.md`, fill in the common primitive sections, and add a row to the primitives table above. The new primitive must own an axis no existing primitive owns.
+- **New pipeline recipe:** add it to `../references/stages.md`, then add a row to the pipeline recipe table above.
 
 ## Related skills
 

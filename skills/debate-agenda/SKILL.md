@@ -91,7 +91,7 @@ Load each file **only** when the trigger condition fires. Loading everything up 
 | `references/composition.md` | A role is filled by a sub-debate ("a jury that's itself a consensus"). Skip otherwise. |
 | `references/branching.md` | Two or more sub-pipelines run in parallel before a join. Skip otherwise. |
 | `references/clarification.md` | Step 1 indicates a clarifying question is needed. Skip if the request is already complete. |
-| `formats/<name>.md` | Exactly one per stage: the format file you have chosen. Do not pre-load the whole library. |
+| `formats/<name>.md` | Exactly one primitive per stage: the format file you have chosen. Do not pre-load the whole library. |
 | `formats/README.md` | Browsing the catalogue when no format clearly fits. Skip once a format is chosen. |
 | `../moderate-debate/references/budget.md` | Step 5, only if a stage needs a non-default budget. |
 | `../moderate-debate/references/checkpoints.md` | Step 5, only if any stage needs a checkpoint. |
@@ -105,7 +105,7 @@ Load each file **only** when the trigger condition fires. Loading everything up 
 - `references/branching.md` — parallel sub-pipelines.
 - `references/clarification.md` — when and how to ask the user.
 - `references/agenda-schema.md` — the on-disk schema for `agenda.md`.
-- `formats/<name>.md` — format playbook library. Five single-stage primitives (parliament, court, panel, workshop, brainstorm) — court / panel / workshop are closed families with named presets (e.g., `court:appeals-court`, `panel:oracle`, `workshop:committee`). Multi-stage pipelines (rfc-pipeline, design-review, bill-to-law, incident-post-mortem) live side by side; pipeline files declare `mode: pipeline` in their frontmatter.
+- `formats/<name>.md` — primitive playbook library. Five single-stage primitives (parliament, court, panel, workshop, brainstorm) — court / panel / workshop are closed families with named presets (e.g., `court:appeals-court`, `panel:oracle`, `workshop:committee`). Multi-stage pipelines (rfc-pipeline, design-review, bill-to-law, incident-post-mortem) are recipes in `references/stages.md`; each stage points to one of these primitive files.
 
 ## Related skills
 
