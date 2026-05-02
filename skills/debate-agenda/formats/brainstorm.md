@@ -59,6 +59,18 @@ Produce all {n_ideas} ideas in one reply.
 
 Output contract: free text, each idea formatted per template. Parsing rule: count "**" bolded titles; should equal `n_ideas`.
 
+#### Contract: `brainstorm-idea-list`
+
+The moderator passes this contract to the per-turn subagent (see `../../moderate-debate/references/contracts.md` and `../../moderate-debate/SKILL.md` §4a):
+
+- **Schema** — free-text reply with `n_ideas` bolded titles (no fenced JSON expected); this validates `text` only and produces no separate `parsed_output`.
+- **Example** — see the prompt template above.
+- **Extraction rule** — the whole reply text.
+- **Re-prompt template** — `Your previous reply did not produce {n_ideas} distinct ideas in the required format, or contained critique language. Reply now with exactly {n_ideas} ideas, each starting with "- **Title**" followed by a one-sentence description, and no critique of any idea.`
+- **Validators**:
+  - `idea_count` — count of lines matching `^- \*\*` equals `n_ideas`.
+  - `no_critique_language` — reply does not match `\b(but this won't work|the problem with [A-Za-z]+ is|won't scale|too complex|that's wrong|bad idea)\b` (case-insensitive). This enforces the strict no-criticism rule from § Defaults.
+
 ### 2. Cluster — **sequential**, single turn
 
 Role: `facilitator`.
@@ -145,4 +157,4 @@ Output contract: markdown with those four sections.
 - **top_k** (phase 3): 3. Range 2–5.
 - **Roster size**: 3–6.
 - **Agent failure**: missing generator in phase 1 = fewer ideas, brainstorm continues; missing converge turn = that cluster is skipped in phase 4 with a note.
-- **Strict no-criticism rule**: if any phase-1 reply contains critique language ("but this won't work", "the problem with X is"), the moderator re-prompts once with the rule restated.
+- **Strict no-criticism rule**: the phase-1 contract MUST declare a `validators` entry named `no_critique_language` (regex over the reply prose, matching e.g. "but this won't work", "the problem with X is"; see `../../moderate-debate/references/contracts.md` § "Contract shape" item 5). The per-turn subagent enforces it on the same shared retry path as any other contract violation — re-prompt once with the rule restated if the turn's retry budget is still available; on terminal failure, the subagent returns `error.kind = "contract_violation"` and the moderator applies the format fallback.

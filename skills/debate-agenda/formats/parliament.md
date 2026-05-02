@@ -90,7 +90,7 @@ Respond with a single fenced json block and nothing else:
 ```
 ```
 
-Output contract: a fenced `json` block parseable as above. On failure, re-prompt once; if it fails again, record as `abstain`.
+Output contract: a fenced `json` block parseable as above. On contract failure, the per-turn subagent re-prompts once if the turn's retry budget is still available; if validation still fails, record as `abstain`.
 
 ### 4. Verdict — **sequential**, single turn
 

@@ -56,7 +56,7 @@ When the user says *"replay run X, swapping role R to CLI C"*:
 
 1. Read the original `agenda.md` and `transcript.jsonl`.
 2. Read the format file at `../../debate-agenda/formats/<format>.md` (current version; flag mismatch if changed).
-3. Read the CLI playbooks at `../../invoke-agent/references/<cli>.md` for every CLI in the (new) roster.
+3. Verify that every CLI in the new roster has a playbook at `../../invoke-agent/references/<cli>.md`; do not load the playbooks into the replay/orchestrator context. The per-turn subagents dispatched by `../../moderate-debate/` read the relevant playbook when they run.
 4. Mint the replay directory per the layout above.
 5. Copy `agenda.md` to the replay dir; apply overrides as a new `## Revisions` entry.
 6. Hand off to `../../moderate-debate/` as a normal run. The moderator walks stages and phases per the (modified) agenda, building prompts from scratch — **not** from the original transcript.

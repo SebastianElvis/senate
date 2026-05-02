@@ -24,13 +24,28 @@ Before each turn:
 
 1. Compute `wall_clock_remaining = wall_clock_sec - (now - started_at)`.
 2. Compute `tokens_remaining = total_tokens - sum(turn tokens so far)`.
-3. If either is below a **safety margin** (default: 10% of cap), skip the turn and go straight to synthesis. Record `"error": "budget_exhausted"` for the skipped turn.
+3. If either is below a **safety margin** (default: 10% of cap), skip the turn and go straight to synthesis. Record `"error": "budget_exhausted"` for the skipped turn with `exit_code: null`, `retry_count: 0`, `stderr_tail: null`, `log_path: null`, and `retry_log_path: null` because no per-turn subagent was dispatched.
 
 Safety margin exists so synthesis itself has budget left.
 
 ## Enforcement
 
-- **Wall clock:** wrapper `timeout $turn_timeout_sec` around each CLI invocation.
+- **Wall clock:** wrap each CLI invocation with a portable timeout command. Resolve it once per per-turn subagent:
+
+  ```bash
+  timeout_cmd() {
+    local seconds="$1"; shift
+    if command -v timeout >/dev/null 2>&1; then
+      timeout "$seconds" "$@"
+    elif command -v gtimeout >/dev/null 2>&1; then
+      gtimeout "$seconds" "$@"
+    else
+      perl -e 'alarm shift; exec @ARGV' "$seconds" "$@"
+    fi
+  }
+  ```
+
+  Use `timeout_cmd "$turn_timeout_sec" <cli command ...>` rather than assuming bare GNU `timeout` exists. macOS does not ship `timeout` by default; Homebrew Coreutils installs it as `gtimeout`; Perl is available on the supported macOS baseline.
 - **Token cap:** checked between turns, not mid-turn. Some CLIs emit more than they should; we cannot truncate a response in flight.
 - **Prompt cap:** if a single prompt would exceed the CLI's known context window, **auto-summarize the transcript slice** before sending. Add a transcript line `"action": "summarize_transcript", "from_turn": N, "to_turn": M`.
 

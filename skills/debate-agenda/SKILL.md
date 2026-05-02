@@ -63,7 +63,7 @@ Budget defaults from `../moderate-debate/references/budget.md`. Override per sta
 
 ### 6. Write `agenda.md`
 
-Write the agenda to `<run-dir>/agenda.md` using the schema in `references/agenda-schema.md`. The agenda is **the living plan**: the moderator may update it mid-run (e.g., add a stage, swap a CLI) but every change appends a `## Revisions` entry — never silently rewrite the original.
+Write the agenda to `<run-dir>/agenda.md` using the schema in `references/agenda-schema.md`. The agenda is **the living plan**, and the planner is its sole writer: when the moderator needs a mid-run change (e.g., add a stage, swap a CLI), it calls back here per § "Re-planning mid-run" below; this skill rewrites `agenda.md` and appends a `## Revisions` entry — never silently rewrite the original. The moderator never edits `agenda.md` directly.
 
 ### 7. Hand off
 

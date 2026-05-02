@@ -4,8 +4,8 @@ A debate's participants need somewhere to share intermediate state that doesn't 
 
 There are two kinds:
 
-- **Shared context** — `context.md`, one per run. Free-form. Every agent reads it at the top of every turn; agents may append to it via a `context-delta` fenced block in their reply.
-- **Private memory** — `agents/<cli>.md`, one per CLI in the roster. Free-form. Only that CLI reads its own file; the moderator updates it from a `private-delta` fenced block in the CLI's reply.
+- **Shared context** — `context.md`, one per run. Free-form. Every agent reads it at the top of every turn; agents may append to it via a `context-delta` fenced block in their reply. The per-turn subagent extracts the block and returns it as `context_delta`; the moderator appends to `context.md`.
+- **Private memory** — `agents/<cli>.md`, one per CLI in the roster. Free-form. Only that CLI reads its own file. The per-turn subagent extracts a `private-delta` fenced block from the CLI's reply and returns it as `private_delta`; the moderator appends to `agents/<cli>.md`. (Both writers — extraction and append — are described in `../SKILL.md` §4a.)
 
 These files are deliberately unstructured. They are scratchpads, not databases. The transcript and bindings carry the structured signal.
 
@@ -38,14 +38,14 @@ After your main reply, you may emit a `context-delta` fenced block:
 Use it for: pointers to evidence ("see line 42 of the diff"), open questions you want others to address, partial findings that aren't yet a position. Don't repeat what's in your main reply — others will read that in the transcript.
 ```
 
-After the turn, the moderator extracts the `context-delta` block and appends to `context.md` under the `## Notes` section, prefixed with `[T<turn>, <role>]`:
+After the turn, the per-turn subagent extracts the `context-delta` block from the CLI reply (the moderator never opens the raw log) and returns it as `context_delta` in its result. The moderator then appends it to `context.md` under the `## Notes` section, prefixed with `[T<turn>, <role>]`:
 
 ```markdown
 - [T3, mp_pro] Migration cost estimate hinges on tokenizer compatibility — see crate `tiktoken-rs` v0.5.
 - [T4, mp_con] If we keep Python, we still need to address the GIL bottleneck in the worker pool.
 ```
 
-Agents may also write into other sections of `context.md` (creating new sections is allowed); the moderator preserves whatever the agent emits in the `context-delta` block verbatim, prefixed with the turn marker.
+Agents may also write into other sections of `context.md` (creating new sections is allowed); the subagent returns the `context-delta` block verbatim and the moderator preserves it verbatim, prefixed with the turn marker.
 
 ### Append-only by convention
 
@@ -96,7 +96,7 @@ After your main reply (and after any `context-delta`), you may emit a `private-d
 Use it for: your evolving private theory, things you don't want to share yet, notes-to-self.
 ```
 
-The moderator extracts and appends to `agents/<cli>.md` under `## Memory`, prefixed with `[T<turn>]`. Same append-only discipline as shared context.
+The per-turn subagent extracts the `private-delta` block (returned as `private_delta` in its result); the moderator appends it to `agents/<cli>.md` under `## Memory`, prefixed with `[T<turn>]`. Same append-only discipline as shared context.
 
 ### One file per CLI, not per role
 

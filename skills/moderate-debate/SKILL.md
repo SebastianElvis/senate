@@ -1,12 +1,12 @@
 ---
 name: moderate-debate
-description: Drives a multi-agent debate from a planned agenda — invokes each CLI per turn, maintains the shared transcript and context, enforces output contracts and budget caps, handles failures, manages checkpoints, and adapts the agenda mid-run when the situation diverges from the plan. Use this skill when senate has an `agenda.md` ready and needs the actual turns run, or when resuming a paused or stalled debate run.
+description: Drives a multi-agent debate from a planned agenda — builds prompts, dispatches each CLI turn into a standalone subagent, commits the shared transcript and context, handles budget/failure/checkpoint policy, and adapts the agenda mid-run when the situation diverges from the plan. Use this skill when senate has an `agenda.md` ready and needs the actual turns run, or when resuming a paused or stalled debate run.
 license: MIT
 ---
 
 # moderate-debate — run the debate from an agenda
 
-You are the **moderator**. You did not plan the debate (the planner wrote `agenda.md`) and you do not synthesize the verdict (the meeting-note skill does). Your job is the live loop: read the agenda, run each turn, keep the records, enforce the rules, adapt when reality diverges from the plan.
+You are the **moderator**. You did not plan the debate (the planner wrote `agenda.md`) and you do not synthesize the verdict (the meeting-note skill does). Your job is the live loop: read the agenda, build prompts, dispatch each CLI turn into an isolated per-turn subagent, commit the returned structured result, keep the records, and adapt when reality diverges from the plan.
 
 A debate without a moderator is a chat. A moderator without an agenda is a chat with extra steps. Both pieces are required.
 
@@ -44,8 +44,9 @@ Each run dir contains a set of shared markdown files that agents read every turn
 agenda.md             # the plan (already exists)
 context.md            # shared scratchpad, free-form, append-only across turns
 transcript.jsonl      # append-only structured per-turn record
-agents/<cli>.md       # per-agent private memory (one file per CLI in the roster)
-agents/<cli>.<turn>.log   # raw stdout per turn
+agents/<cli>.md       # per-agent private memory (one file per CLI in the roster) — moderator writer
+agents/<cli>.<turn>.log    # raw stdout per turn — per-turn subagent writer
+agents/<cli>.<turn>.stderr # raw stderr per turn (only when non-empty) — per-turn subagent writer
 ```
 
 On first start of a run: create empty `context.md` (with a brief header explaining its purpose) and an empty `agents/<cli>.md` for each unique CLI in the agenda.
@@ -59,12 +60,11 @@ For each `stage` in `agenda.stages` (in `index` order):
 3. For each phase the format specifies:
    - For each turn in the phase (sequential or parallel per the format):
      - Build the turn prompt (see "Turn prompt construction" below).
-     - Invoke the CLI per `../invoke-agent/references/<cli>.md`.
-     - Capture stdout to `agents/<cli>.<turn>.log`.
-     - Validate the contract per `references/contracts.md`. Re-prompt once on first failure; on second failure, apply the format fallback.
-     - Detect failures per `references/failures.md`, record the line, **then apply the escalation rule from `references/failures.md` § Escalation before proceeding**. In particular: an `auth` error aborts the entire run; do not invoke the same CLI again, do not start the next turn. Update `state.json` to `status: aborted` with the reason, write `failures.md`, and hand back to `senate`.
-     - Append a JSONL line to `transcript.jsonl`.
-     - Apply context updates: any `context-delta` block from the agent's reply gets appended to `context.md`; the agent's own `agents/<cli>.md` gets updated from a `private-delta` block. See `references/context.md`.
+     - **Dispatch the CLI call as a subagent** (see "Per-turn subagent" below). Never shell out to the CLI from your own context — raw stdout, stderr, banners, and re-prompt traffic must not enter the moderator's window. Parallel turns become parallel subagent dispatches; commit their results in turn-id order after all have returned (see "Parallel-turn ordering" in §4a).
+     - The subagent returns a small structured result (full shape in §4a). Forward its fields into `transcript.jsonl`, `context.md`, and `agents/<cli>.md` per the commit pattern, then discard the result — you do not retain `text` or `parsed_output` across turns. You never open the raw `.log` file; the on-disk log is for replay/debug only.
+     - On `error.kind == "contract_violation"`, apply the format's fallback rule. On any other error, follow `references/failures.md`, record the line, **then apply the escalation rule from `references/failures.md` § Escalation before proceeding**. In particular: an `auth` error aborts the entire run; do not dispatch the same CLI again, do not start the next turn. Update `state.json` to `status: aborted` with the reason, write `failures.md`, and hand back to `senate`.
+     - Append a JSONL line to `transcript.jsonl` per the canonical schema in `../senate/references/workspace.md`. Subagent-sourced fields: `text`, `exit_code`, `retry_count`, `stderr_tail`, `structured` ← `parsed_output`, `error` ← `error.kind`, `log_path`, `retry_log_path`. Moderator-sourced fields: `prompt` (you built it), `ts`, `prompt_tokens` / `completion_tokens` / `tokens_estimated`, `context_delta_appended` / `private_delta_appended` (true iff you appended a non-empty delta this turn), `sub_run_id` (set only for composed sub-debate turns).
+     - Apply context updates: append `context_delta` to `context.md`; append `private_delta` to `agents/<cli>.md`. See `references/context.md`.
    - **Update `state.json` at every turn boundary** with the new `last_activity_at` (atomic write: temp file + rename). Don't batch state updates to stage boundaries — a crashed or timed-out run leaves no signal of progress otherwise.
 4. Check budget per `references/budget.md` between turns. If a cap is near, gracefully terminate and skip to the stage's synthesis turn.
 5. Extract the stage's `output_bindings` from the verdict.
@@ -81,15 +81,105 @@ Every turn prompt has these sections, in this order:
 5. **Transcript slice** — prior turns this role is allowed to see (some formats redact).
 6. **Turn instruction** — what to produce this turn, including the output contract (fenced JSON) if any, and the fence labels for an optional `context-delta` block (free-form prose to append to shared context) and an optional `private-delta` block (free-form prose to append to the agent's own memory).
 
-Pass the prompt via stdin (heredoc) per `../invoke-agent/SKILL.md`. Wrap in `timeout` per `references/budget.md`.
+The prompt string is handed to the per-turn subagent, which passes it to the CLI via stdin per `../invoke-agent/SKILL.md` and wraps the call with the portable timeout command from `references/budget.md`.
+
+### 4a. Per-turn subagent
+
+Every turn-level CLI invocation runs inside a fresh subagent (Agent / Task tool, isolated context). The moderator never reads raw CLI stdout. If that turn needs the one permitted retry (`rate_limit`, `timeout`, exit-0 empty stdout, or contract re-prompt), the retry stays inside the same isolated subagent and is recorded as that turn's `r1` attempt; retry traffic still never enters the moderator's context.
+
+**Why:** debates are long. Raw CLI output, ANSI banners, re-prompt traffic, and CLI quirks would otherwise accumulate in the moderator's context, crowding out the transcript and shared scratchpad and coupling moderator stability to per-CLI failure modes. Subagent isolation also lets parallel turns actually run in parallel.
+
+**Inputs to the subagent** (everything it needs — it does not see the moderator's wider state):
+
+- `run_dir` — absolute path to `<cwd>/.senate/runs/<id>/`.
+- `cli` — name matching a playbook in `../invoke-agent/references/<cli>.md`.
+- `turn_id` — integer matching the upcoming `turn` field in `transcript.jsonl`. Used for log filenames (`agents/<cli>.<turn_id>.log` and `agents/<cli>.<turn_id>.stderr`).
+- `prompt` — the full turn prompt built per "Turn prompt construction".
+- `contract` — `schema`, `example`, `extraction rule`, `re-prompt template`, and an optional `validators` list (from the format file; full shape in `references/contracts.md`). `validators` carries free-form predicates the subagent enforces alongside schema validation — e.g., the brainstorm format's "no critique language in phase 1" or rfc's "paragraphs are numbered" rule. They run on the same shared retry path as schema validation: any predicate failure is treated as a contract violation, the subagent re-prompts once if the turn's retry budget is still available, and a second failure (or a first contract failure after a non-contract retry already consumed the budget) returns `error.kind = "contract_violation"`. `contract` is `null` for turns with no machine validation: the subagent skips validation, sets `contract_ok: true`, and `parsed_output: null`. Free-text contracts may validate `text` without producing a separate `parsed_output`. The `context-delta` / `private-delta` extraction is independent of the contract and runs either way.
+- `timeout_seconds` — per `references/budget.md`.
+
+**What the subagent does** (and only this — files it owns are listed below; it never touches `transcript.jsonl`, `context.md`, `agents/<cli>.md`, `state.json`, `failures.md`, `agenda.md`, or any stage verdict):
+
+1. Read `../invoke-agent/references/<cli>.md` for the exact invocation shape.
+2. Shell out non-interactively, prompt on stdin, wrapped with the portable timeout command from `references/budget.md`. Strip ANSI. Capture stdout to `agents/<cli>.<turn_id>.log`, stderr to `agents/<cli>.<turn_id>.stderr`. **Always keep the `.log` file** (even when empty, so `log_path` always resolves); delete the `.stderr` only if it ended up empty (`[ -s file ] || rm -f file`).
+3. Detect non-contract errors per `references/failures.md` (auth / rate_limit / timeout / refusal / unknown). On `rate_limit`, `timeout`, or exit-0 empty-stdout `unknown`, retry per the policy in that file before returning — the retry attempt's stdout/stderr go to `agents/<cli>.<turn_id>r1.log` / `.stderr` (uniform retry naming, see step 4); set `retry_log_path` on the return. `error.kind` MUST be one of the codes in that file's taxonomy.
+4. If the call succeeded (no error), validate against the contract per `references/contracts.md`. On first parse/validate failure, re-prompt the CLI once with the re-prompt template **only if the turn's shared retry budget has not already been consumed**. The re-prompt call is written to `agents/<cli>.<turn_id>r1.log` / `.stderr`. On second failure, or on first contract failure after a non-contract retry already consumed `r1`, return `error: { kind: "contract_violation" }`. Whether the retry was triggered by `rate_limit`, `timeout`, exit-0 empty stdout, or contract validation, the file naming is the same `r1` suffix and there is at most one retry per turn.
+5. Extract optional `context-delta` and `private-delta` blocks per `references/context.md`.
+6. Return a single structured result. No prose, no narrative, no rendered raw stdout.
+
+**Subagent return shape** (fixed; moderator code reads these field names directly):
+
+```json
+{
+  "contract_ok": true,
+  "text": "…cleaned reply, ANSI-stripped, exactly what should land in transcript.jsonl.text…",
+  "parsed_output": { "...": "..." },
+  "context_delta": "…or null…",
+  "private_delta": "…or null…",
+  "log_path": "agents/<cli>.<turn_id>.log",
+  "stderr_path": null,
+  "retry_log_path": null,
+  "retry_stderr_path": null,
+  "exit_code": 0,
+  "retry_count": 0,
+  "stderr_tail": null,
+  "duration_seconds": 42,
+  "error": null
+}
+```
+
+Field rules — split by where the value lands:
+
+*Forwarded to transcript line* (moderator copies into `transcript.jsonl`):
+
+- `text` — present on every return (success or failure); empty string if the CLI produced no usable stdout. Forwarded verbatim into `transcript.jsonl.text`; it is the only place cleaned reply prose enters the moderator's context, and only fleetingly during commit.
+- `parsed_output` — object iff the contract declares a machine-readable structured block (usually fenced JSON) AND validation passed. `null` for free-text contracts that only validate the reply prose, for `contract: null` turns, and for any error (including `contract_violation`). Maps to `transcript.jsonl.structured` and is omitted from the transcript when `null`.
+- `exit_code` — last CLI invocation's exit code (the retry's, if a retry happened). Maps directly.
+- `retry_count` — counts CLI re-invocations the subagent performed (`rate_limit`, `timeout`, exit-0 empty-stdout `unknown`, or contract re-prompt — at most one retry per turn under any policy). `0` on first-try success, `1` on any retried turn.
+- `stderr_tail` — last 200 bytes of stderr when `error` is set, else `null`. Already truncated by the subagent.
+- `error` — `null` on success. Otherwise `{ "kind": "<code>", "detail": "..." }` where `<code>` is one of the codes in `references/failures.md` (`auth | rate_limit | timeout | contract_violation | refusal | unknown`). The moderator imposes `budget_exhausted` itself before dispatching; the subagent never returns it. The moderator stores only `error.kind` in `transcript.jsonl.error`.
+- `log_path` — relative path (from run dir) to the `.log` file for the first attempt. Always set; the file always exists (even when empty).
+- `retry_log_path` — relative path to the retry attempt's `.log` (e.g., `agents/codex.7r1.log`); `null` when no retry happened. Naming is uniform across retry causes (`rate_limit`, `timeout`, exit-0 empty stdout, contract violation): `<cli>.<turn>r1.log`. There is never an `r2` — at most one retry per turn under any policy.
+
+*Used for moderator control flow / failures-md / debug, not persisted in transcript:*
+
+- `contract_ok` — boolean. Convenience for the moderator: equivalent to `error == null` (any non-`null` error means contract validation either didn't run or didn't pass). Equivalently, `contract_ok` is `true` iff the moderator can use this turn's output without invoking the format fallback. Discard after deciding whether to apply the format fallback.
+- `stderr_path`, `retry_stderr_path` — relative paths to `.stderr` files when they survived the empty-prune; `null` otherwise. Used by the moderator only when populating `failures.md` for an error turn; otherwise discarded.
+- `duration_seconds` — wall-clock seconds the subagent spent on this turn (sum across attempts). Aggregated into `state.json.budget_remaining` when applicable; not stored per-line in the transcript.
+
+*Forwarded to context/private files* (moderator appends to the right file):
+
+- `context_delta` — string or `null`. If non-`null` and non-empty, the moderator appends it to `context.md` and sets `transcript.jsonl.context_delta_appended = true`.
+- `private_delta` — string or `null`. Same shape, appended to `agents/<cli>.md` and reflected as `private_delta_appended`.
+
+**Parallel-turn ordering.** When a phase declares parallel turns, the moderator dispatches all subagents concurrently and **awaits all** before committing any writes. After await, commit results to `transcript.jsonl`, `context.md`, and `agents/<cli>.md` in ascending `turn_id` order. All parallel subagents in a phase see the same pre-phase snapshot of `context.md` and `agents/<cli>.md`; they cannot observe each other's deltas. (This is intentional — parallel phases model independent reasoning. If a format needs deltas to be visible mid-phase, declare the turns sequential.)
+
+**Parallel + escalation.** Even if one parallel subagent returns an `auth` error (or any other escalation-trigger per `references/failures.md`), the moderator still **awaits the rest** before acting — they are already running and cancelling them buys nothing. After await, commit every returned result in ascending `turn_id` order (including the auth error), then apply the escalation rule. For `auth`: stop dispatching new subagents anywhere, write `state.json: aborted` with the reason, write `failures.md`, hand back to `senate`. Do **not** treat sibling successes as invalid; they are part of the run record.
+
+**Commit pattern (mandatory).** For each completed subagent result, the moderator's loop is: receive → write transcript line (atomic append) → append deltas to `context.md` / `agents/<cli>.md` → update `state.json.last_activity_at` (temp file + rename) → discard the result object. Do not retain `text` or `parsed_output` in your context after commit; reread `transcript.jsonl` if a later step needs them.
+
+**Subagent crash / malformed return.** A dispatched subagent may fail to return a structured result — tool failure, hard timeout outside the inner `timeout` wrapper, malformed JSON. In that case:
+
+1. Treat the missing turn as `error.kind = "unknown"` for the purposes of `transcript.jsonl` and `failures.md`.
+2. **Restore the log invariant before writing the transcript line:** check whether `agents/<cli>.<turn_id>.log` exists; if not, create it as an empty file (`: > <path>`) so the `log_path` invariant ("always resolves") still holds. Do the same for `agents/<cli>.<turn_id>r1.log` only if it exists partially or its presence is implied by what the subagent did before crashing — otherwise leave `retry_log_path` as `null`.
+3. Synthesize the transcript line: `text: ""`, `exit_code: null`, `retry_count: 0`, `stderr_tail: "<reason the subagent gave, or 'subagent_crash'>"`, `structured` omitted, `log_path` set to the (now-guaranteed-existing) first-attempt path, `retry_log_path` per the rule above.
+4. Apply the format's fallback rule (same as any other terminal error).
+5. The escalation rules in `references/failures.md` § Escalation still apply, with the synthetic `unknown` error counting toward `unknown`-error escalation thresholds. A subagent crash is never `auth` (auth would have been detected and returned by a working subagent), so do not abort the run on a single crash; rely on the existing escalation policy.
+
+**What the moderator owns** (never delegate these to the subagent — they need the wider run state):
+
+- Building the prompt (needs `context.md`, `agents/<cli>.md`, transcript slice).
+- Appending to `transcript.jsonl` (sole writer; subagent never touches it).
+- Updating `context.md` and `agents/<cli>.md` from the deltas (sole writer; serialized in turn-id order).
+- Atomic `state.json` updates: `last_activity_at` at every turn boundary, full re-write at every stage boundary and checkpoint per `../senate/references/workspace.md`.
+- Failure escalation, re-plan callbacks, checkpoint decisions.
 
 ### 5. Adaptive moderation
 
 The agenda is the plan, not a script. When reality diverges, decide whether to:
 
-- **Continue as planned** — minor variance (one slow turn, one retried contract). Default.
-- **Re-prompt** — agent's reply was off-spec but recoverable. Per `references/contracts.md`.
-- **Apply format fallback** — agent failed twice. Per the format file's fallback rule.
+- **Continue as planned** — minor variance (one slow turn, one transient retry inside the subagent). Default. Note: contract re-prompts are owned by the per-turn subagent (§4a) and are invisible to this loop unless they fail twice.
+- **Apply format fallback** — subagent returned `error.kind == "contract_violation"` (the in-subagent re-prompt did not recover the reply) or another terminal error per `references/failures.md`. Per the format file's fallback rule.
 - **Pause for the user** — checkpoint hit, or stage failed catastrophically (all agents refused, budget exhausted). Per `references/checkpoints.md`.
 - **Call back to `debate-agenda` for a re-plan** — the situation has changed in a way the plan didn't anticipate (user changed direction, an agent kept refusing across stages, a checkpoint was rejected with a request for new structure). Pass: prior agenda, recent transcript slice, the reason. Receive: revised agenda. Resume at the next unfinished stage.
 
@@ -149,5 +239,5 @@ If the moderator is invoked on a run dir that already has `transcript.jsonl` con
 ## Related skills
 
 - `../debate-agenda/` — produces the `agenda.md` this skill consumes; called back for mid-run re-plans. Format library at `../debate-agenda/formats/`.
-- `../invoke-agent/` — per-CLI invocation playbooks.
+- `../invoke-agent/` — per-CLI invocation playbooks, read inside the per-turn subagent for the CLI it is about to invoke.
 - `../meeting-note/` — runs after the moderator finishes; consolidates the transcript into user-facing notes.
