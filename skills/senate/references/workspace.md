@@ -179,6 +179,8 @@ Replay runs may add one top-level metadata file, `replay_manifest.json`, as desc
 
 This is the **canonical** schema. Every other file that needs to record or interpret a transcript line refers back to this.
 
+The schema below is shown across multiple lines for readability. **On disk, each transcript line MUST be a single physical line** — the JSON object must be serialized without internal newlines, with embedded newlines in `prompt` / `text` / `stderr_tail` escaped as `\n`. Multi-line records break `jq -c .` and the eval harness's per-line parser.
+
 ```json
 {
   "turn": 1,

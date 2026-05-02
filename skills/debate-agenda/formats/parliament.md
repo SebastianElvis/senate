@@ -104,7 +104,7 @@ You are the speaker of this parliament. Write the verdict for: {task}
 Vote tally: {tally}
 Full transcript: {transcript_slice: full}
 
-Produce a markdown document with sections: Decision, Rationale (cite turn numbers), Dissent.
+Produce a markdown document with three top-level sections, **named exactly** `## Decision`, `## Rationale`, and `## Dissent` (no parenthetical suffixes in the heading line). Cite turn numbers as `T<n>` in the Rationale body.
 
 Then append a fenced json block with the structured outcome, no other prose after it:
 

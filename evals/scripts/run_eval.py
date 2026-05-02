@@ -121,7 +121,7 @@ Use these settings (the user has already chosen them; do not re-plan):
 {roster_lines}
 - Rounds: {rounds}
 
-Run the debate to completion. Do not stop at any optional checkpoints.
+Run the debate to completion. Do not stop at any optional checkpoints. Follow every numbered step of the senate skill in order — including step 4 (invoke meeting-note to write notes.md). Before reporting back, verify with `test -s <run-dir>/notes.md` that the file exists and is non-empty; if it is missing, the run is not complete.
 
 # Task
 

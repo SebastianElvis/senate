@@ -62,7 +62,26 @@ Create `<cwd>/.senate/runs/<YYYY-MM-DD-HHMM>-<format-or-pipeline-name>/` (never 
 
 Based on `prepare_agenda`:
 
-- **`auto` and request is well-specified** (format named, roster named, single-stage, no composition) — or **`false`**: write a minimal `agenda.md` directly from the user's request. The minimal agenda fills the same `references/agenda-schema.md` shape the planner would: one stage, format from the user, roster from the user (or default `codex, gemini, claude`), default budget from `../moderate-debate/references/budget.md`, `checkpoint: none`, `status: ready`. Validate per the schema; if validation fails, fall back to invoking `../debate-agenda/`.
+- **`auto` and request is well-specified** (format named, roster named, single-stage, no composition) — or **`false`**: write a minimal `agenda.md` directly from the user's request. The minimal agenda fills the same `../debate-agenda/references/agenda-schema.md` shape the planner would: one stage, format from the user, roster from the user (or default `codex, gemini, claude`), default budget from `../moderate-debate/references/budget.md`, `checkpoint: none`, `status: ready`. **The roster MUST live inside the YAML frontmatter** under `stages[0].roster` as a list of `{ role, cli }` objects — not as a markdown bulleted list in the body. Downstream graders and the moderator parse only the YAML frontmatter; a body-only roster looks empty and the run fails. Concrete minimum frontmatter:
+  ```yaml
+  ---
+  run_id: <YYYY-MM-DD-HHMM-format>
+  task: "<verbatim user task>"
+  mode: single
+  status: ready
+  created_at: <ISO-8601 UTC>
+  stages:
+    - index: 1
+      name: <format>
+      format: <format>
+      roster:
+        - { role: <role>, cli: <cli> }
+        - { role: <role>, cli: <cli> }
+      rounds: <int>
+      checkpoint: none
+  ---
+  ```
+  Validate per `../debate-agenda/references/agenda-schema.md`; if validation fails, fall back to invoking `../debate-agenda/`.
 - **`auto` and request is ambiguous** OR **`true`**: invoke `../debate-agenda/`. The planner produces `agenda.md`. If the planner returns `status: pending_clarification`, surface its question to the user, get the answer, and ask the planner to revise.
 
 Either way, the agenda lives at `<run-dir>/agenda.md` with `status: ready` before step 3 begins. Senate does not touch `agenda.md` after step 3 — only the planner (via re-plan) writes to it.
@@ -71,9 +90,16 @@ Either way, the agenda lives at `<run-dir>/agenda.md` with `status: ready` befor
 
 Invoke `../moderate-debate/`. It reads `agenda.md` and runs the debate to completion (or pauses at a checkpoint). On a checkpoint pause, surface the checkpoint state to the user; on continue/revise/abort/re-plan, route accordingly.
 
-### 4. Consolidate the result
+### 4. Consolidate the result (mandatory — do not skip)
 
 When the moderator returns `status: completed` (or `stalled` / `aborted` with whatever was produced), invoke `../meeting-note/`. It writes the single user-facing `notes.md`.
+
+This step is **not optional** — `notes.md` is the only user-facing artifact, and the eval harness's `notes_md_present` check fails the entire run if it is missing or empty. Even an aborted or stalled run must produce a `notes.md` so the user has a single place to read what happened. Specifically:
+
+1. After the moderator returns, do **not** report back to the user yet. First load `../meeting-note/SKILL.md` and follow it to write `<run-dir>/notes.md`.
+2. After meeting-note returns, run a verification check: `test -s "<run-dir>/notes.md"` must succeed (file exists AND is non-empty).
+3. If verification fails, re-invoke `../meeting-note/` once more before continuing. If it still fails, surface the problem to the user as part of step 5 — but never silently skip this step.
+4. Only after `notes.md` is verified present-and-non-empty may you proceed to step 5.
 
 ### 5. Report back
 
