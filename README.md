@@ -88,6 +88,46 @@ senate
   → meeting-note                   — consolidate: write verdict.md and meeting-notes.md
 ```
 
+Sequence of execution for a single run:
+
+```
+              user request
+                   │
+                   ▼
+         ┌───────────────────┐
+         │      senate       │   mints .senate/runs/<id>/
+         │   (orchestrator)  │   writes initial state.json
+         └─────────┬─────────┘
+                   │
+                   ▼
+         ┌───────────────────┐
+         │   debate-agenda   │ ──── writes ───▶  agenda.md
+         │     (planner)     │
+         └─────────┬─────────┘
+                   │
+                   ▼
+         ┌───────────────────┐    per turn    ┌──────────────────┐
+         │  moderate-debate  │ ─────────────▶ │   invoke-agent   │
+         │    (moderator)    │ ◀───────────── │    (per-CLI)     │
+         └─────────┬─────────┘    response    └────────┬─────────┘
+                   │                                   │
+                   │ appends                           ▼
+                   │   ▶ transcript.jsonl     codex · gemini · cursor
+                   │   ▶ context.md           kimi  · claude
+                   │   ▶ agents/<cli>.md
+                   ▼
+         ┌───────────────────┐ ──── writes ───▶  verdict.md
+         │   meeting-note    │                   meeting-notes.md
+         │     (scribe)      │
+         └─────────┬─────────┘
+                   │
+                   ▼
+              user-facing
+              summary + verdict
+```
+
+`moderate-debate` loops over turns, calling `invoke-agent` for each participant; pipelines repeat the planner/moderator pair per stage under `stages/<N>-<name>/` before `meeting-note` consolidates.
+
 | Skill | Purpose |
 | --- | --- |
 | `senate` | Top-level entry. Mints the run dir and routes through the three lifecycle skills. |
