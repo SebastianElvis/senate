@@ -73,7 +73,7 @@ The shape mirrors how RFCs work in practice: an author drafts, a distributed gro
 - **Stage 2 has `resolution_rate < 0.5`** — pipeline continues but the synthesize stage's prompt is enriched with a warning that many comments went unaddressed.
 - **Stage 3 fails the checkpoint** (user rejects) — user may revise manually and resume, or abort.
 
-## Verdict shape (for senate-eval fixtures)
+## Verdict shape (for evals fixtures)
 
 The top-level `verdict.md` follows the canonical multi-stage shape in `../../meeting-note/references/verdict-schema.md`. Inside its `## Final deliverable` section, this pipeline produces:
 

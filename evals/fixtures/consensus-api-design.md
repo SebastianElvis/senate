@@ -7,6 +7,15 @@ roster:
   - {role: contributor, cli: kimi}
   - {role: arbiter, cli: claude}
 max_rounds: 3
+assertions:
+  - {kind: section_present, section: Artifact}
+  - {kind: section_regex, section: Artifact, pattern: "\\bPOST\\b", min_count: 1}
+  - {kind: section_regex, section: Artifact, pattern: "\\bGET\\b", min_count: 1}
+  - {kind: section_contains_one_of, section: Confidence, values: [converged, partial, stalled]}
+  - {kind: section_present, section: Remaining concerns}
+  - {kind: section_present, section: Process notes}
+  - {kind: section_regex, section: Process notes, pattern: "\\b\\d+\\s+(round|refine)", ignore_case: true}
+judge_rubrics: [verdict, agenda, meeting_notes]
 ---
 
 # Task

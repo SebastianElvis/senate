@@ -63,7 +63,7 @@ Make H0 boring. Today's H0 ships correct-looking prompts; H1 ships prompts that 
 **Ships:**
 
 - **Contract hardening.** Every phase that emits structured output gets a contract file (`contracts/parliament-vote.json`) — JSON schema + example + re-prompt template. Orchestrator validates and retries mechanically.
-- **Eval harness** (a separate skill, `senate-eval`). A set of fixture debates with expected shape of outcome. Nightly runnable locally; reports format success rate per CLI.
+- **Eval harness** (a separate skill, `evals`). A set of fixture debates with expected shape of outcome. Nightly runnable locally; reports format success rate per CLI.
 - **Replay.** `transcript.jsonl` is complete enough that `senate replay <run-id>` re-runs the same debate deterministically (same prompts, same CLIs, same order) to compare models.
 - **Budget guardrails.** Per-run token/wall-clock caps enforced in the orchestrator prompt.
 - **Failure taxonomy.** Standard vocabulary in `transcript.jsonl` for the five ways an agent turn fails: auth, rate-limit, timeout, contract-violation, refusal.

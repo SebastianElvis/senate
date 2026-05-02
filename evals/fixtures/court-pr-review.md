@@ -6,6 +6,13 @@ roster:
   - {role: defense, cli: claude}
   - {role: judge, cli: gemini}
 rounds: 2
+assertions:
+  - {kind: section_contains_one_of, section: Decision, values: [sustain, dismiss, remand]}
+  - {kind: section_turn_refs, section: Reasoning, min: 2}
+  - {kind: section_present, section: Dissent}
+  - {kind: transcript_turn_regex, role: prosecution, nth: 1, pattern: "^\\s*\\d+\\.\\s+\\S", min_count: 3}
+  - {kind: text_mentions_any, terms: [jitter, thundering herd, retry storm]}
+judge_rubrics: [verdict, agenda, meeting_notes]
 ---
 
 # Task

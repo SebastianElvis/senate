@@ -1,11 +1,11 @@
-# Scoring rubric
+# Scoring rubric (deterministic side)
 
-How a single fixture run becomes one line in `scorecard.jsonl`.
+How a single fixture run's *deterministic* checks become one entry in `scorecard.jsonl`. This file describes the contract-compliance / structural side only. The full scoring also runs LLM judges per `judges/<rubric>.md`; those produce the `judges` block in the scorecard. See `SKILL.md` for the combined scorecard schema and pass/fail rule.
 
 ## Inputs
 
 - The fixture file (task, roster, rounds, expected verdict shape).
-- The completed run directory under `.senate-eval/runs/<run-id>/` with `transcript.jsonl`, `verdict.md`, and (if any) `failures.md`.
+- The completed run directory under `.evals/runs/<run-id>/` with `transcript.jsonl`, `verdict.md`, and (if any) `failures.md`.
 
 ## Outputs per run
 
@@ -41,7 +41,7 @@ Sum turn durations and token usage from `transcript.jsonl`. Round wall-clock to 
 
 ## Writing the scorecard line
 
-Append one JSON object to `.senate-eval/scorecard.jsonl` matching the schema in `SKILL.md`. Never overwrite prior lines.
+Append one JSON object to `.evals/scorecard.jsonl` matching the schema in `SKILL.md`. Never overwrite prior lines.
 
 ## Regression detection
 

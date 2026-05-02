@@ -7,6 +7,14 @@ roster:
   - {role: mp_neutral, cli: kimi}
   - {role: speaker, cli: claude}
 rounds: 2
+assertions:
+  - {kind: section_contains_one_of, section: Decision, values: ["yes", "no", "remand"]}
+  - {kind: section_turn_refs, section: Rationale, min: 2}
+  - {kind: section_present, section: Dissent}
+  - {kind: section_regex, section: Decision, pattern: "\\b\\d+\\s*[-–]\\s*\\d+\\b"}
+  - {kind: text_mentions_any, terms: [team experience, hiring, learning curve, ramp]}
+  - {kind: text_mentions_any, terms: [performance, latency, memory, throughput]}
+judge_rubrics: [verdict, agenda, meeting_notes]
 ---
 
 # Task

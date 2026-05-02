@@ -62,9 +62,10 @@ For each `stage` in `agenda.stages` (in `index` order):
      - Invoke the CLI per `../invoke-agent/references/<cli>.md`.
      - Capture stdout to `agents/<cli>.<turn>.log`.
      - Validate the contract per `references/contracts.md`. Re-prompt once on first failure; on second failure, apply the format fallback.
-     - Detect failures per `references/failures.md` and record.
+     - Detect failures per `references/failures.md`, record the line, **then apply the escalation rule from `references/failures.md` § Escalation before proceeding**. In particular: an `auth` error aborts the entire run; do not invoke the same CLI again, do not start the next turn. Update `state.json` to `status: aborted` with the reason, write `failures.md`, and hand back to `senate`.
      - Append a JSONL line to `transcript.jsonl`.
      - Apply context updates: any `context-delta` block from the agent's reply gets appended to `context.md`; the agent's own `agents/<cli>.md` gets updated from a `private-delta` block. See `references/context.md`.
+   - **Update `state.json` at every turn boundary** with the new `last_activity_at` (atomic write: temp file + rename). Don't batch state updates to stage boundaries — a crashed or timed-out run leaves no signal of progress otherwise.
 4. Check budget per `references/budget.md` between turns. If a cap is near, gracefully terminate and skip to the stage's synthesis turn.
 5. Extract the stage's `output_bindings` from the verdict.
 6. Honor checkpoints per `references/checkpoints.md`. If a `required` or triggered `conditional` checkpoint fires, write checkpoint state and pause.
