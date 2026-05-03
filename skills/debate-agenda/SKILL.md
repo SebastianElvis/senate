@@ -67,11 +67,12 @@ Write the agenda to `<run-dir>/agenda.md` using the schema in `references/agenda
 
 ### 7. Hand off
 
-Return to the caller (usually `senate`):
+Return to the caller (usually `senate`). The caller will use this to drive its agenda-confirmation gate (`senate` step 2.5), so shape the summary for that purpose:
 
 - Path to `agenda.md`.
-- One-paragraph summary: format(s), roster, stage count, expected budget, any open questions surfaced.
-- Whether the agenda is `ready` (start moderating) or `pending_clarification` (caller must ask the user something before moderation begins).
+- A 2–3 sentence summary structured as: **format(s) and stage count**, **roster as `role: cli` pairs**, **rounds**, **budget headline** (wall-clock + total tokens).
+- The list of `open_questions` from the agenda (verbatim, or empty list).
+- Whether the agenda is `ready` (caller may run the confirmation gate then start moderating) or `pending_clarification` (caller must ask the user something before the gate is meaningful).
 
 ## Re-planning mid-run
 

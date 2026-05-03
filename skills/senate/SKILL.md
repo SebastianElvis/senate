@@ -84,6 +84,35 @@ Based on `prepare_agenda`:
 
 Either way, the agenda lives at `<run-dir>/agenda.md` with `status: ready` before step 3 begins. Senate does not touch `agenda.md` after step 3 — only the planner (via re-plan) writes to it.
 
+### 2.5. Confirm the agenda with the user
+
+The agenda is a non-trivial commitment of tokens and wall-clock; the user gets one explicit chance to redirect it before moderation starts.
+
+**When this gate fires.** Key the decision off **whether the planner actually ran in step 2**, not off `prepare_agenda` mode — every mode (`auto`, `true`, `false`) can fall through to invoking the planner if minimal-agenda validation fails. Concretely: run the gate iff `../debate-agenda/` was invoked at any point during step 2 (initial dispatch or validation-failure fallback). Skip it iff senate wrote the minimal agenda directly and validation passed without ever calling the planner.
+
+**What to surface.** Send one message to the user containing, in this order:
+
+1. A 2–3 sentence summary of the agenda: format(s) and stage count, roster as `role: cli` pairs, rounds, budget headline (wall-clock, total tokens).
+2. The path to `agenda.md` so the user can read the full plan.
+3. Any `open_questions` from the agenda, inline as a bulleted list (omit the section entirely if empty — don't print "(none)").
+4. A fixed three-choice ending, verbatim:
+
+   ```
+   How would you like to proceed?
+     (a) Approve and run the debate.
+     (b) Revise the agenda — say what to change (format, roster, rounds, budget, stages, …).
+     (c) Cancel.
+   ```
+
+Stop there and wait for the user's reply. Do not start moderating.
+
+**Routing the reply.**
+
+- **(a) / "approve" / "go" / "run it" / any clear affirmative** → proceed to step 3.
+- **(b) / a revision request (even without the letter)** → call back to `../debate-agenda/` with the user's revision text plus the current `agenda.md` and ask it to re-plan. The planner appends a `## Revisions` entry and returns a new `agenda.md`. Re-run **this step** (2.5) on the revised agenda — the user gets to confirm again. Soft cap: after 3 revision rounds the gate is likely thrashing; before sending the user another revised agenda, ask explicitly *"continue revising, or cancel?"* and only proceed on a clear "continue". No hard cap.
+- **(c) / "cancel" / "stop"** → write `state.json` with top-level `status: "aborted"` and `aborted_reason: "cancelled_at_agenda"` (per `references/workspace.md` schema), then rename the run dir to `<id>.aborted` per the same file's cleanup convention. Surface the renamed path to the user. Do **not** proceed to step 3 or step 4, and do not invoke `meeting-note` — the cancel path is pre-debate, so there is nothing to summarize.
+- **Ambiguous reply** (the user asks a question, comments without choosing, etc.) → answer the question or acknowledge the comment, then re-present the three-choice ending. Do not assume approval.
+
 ### 3. Moderate the debate
 
 Invoke `../moderate-debate/`. It reads `agenda.md` and runs the debate to completion (or pauses at a checkpoint). On a checkpoint pause, surface the checkpoint state to the user; on continue/revise/abort/re-plan, route accordingly.

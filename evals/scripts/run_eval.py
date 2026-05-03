@@ -90,6 +90,13 @@ def extract_task(body: str) -> str:
 
 def build_orchestrator_prompt(fm: dict, task: str, *, skill_root: Path | None = None,
                               force_roster_cli: str | None = None) -> str:
+    if fm.get("mode") == "pipeline" or fm.get("stages"):
+        raise ValueError(
+            "build_orchestrator_prompt only supports flat single-stage fixtures. "
+            "Pipeline / multi-stage fixtures need a different prompt path that "
+            "lets the planner run (and would also need to handle the senate "
+            "step 2.5 agenda-confirmation gate non-interactively)."
+        )
     fmt = fm.get("format")
     roster = fm.get("roster", [])
     if force_roster_cli:
@@ -118,7 +125,7 @@ Use these settings (the user has already chosen them; do not re-plan):
 {roster_lines}
 - Rounds: {rounds}
 
-Run the debate to completion. Do not stop at any optional checkpoints. Follow every numbered step of the senate skill in order — including step 4 (invoke meeting-note to write notes.md). Before reporting back, verify with `test -s <run-dir>/notes.md` that the file exists and is non-empty; if it is missing, the run is not complete.
+This is a non-interactive harness — there is no user to answer prompts mid-run. Treat the request as fully specified: take the senate `prepare_agenda: false` path (write the minimal agenda directly without invoking `debate-agenda`), and **skip the step 2.5 agenda-confirmation gate** — proceed straight from agenda to moderation. Do not stop at any optional checkpoints. Follow every other numbered step of the senate skill in order — including step 4 (invoke meeting-note to write notes.md). Before reporting back, verify with `test -s <run-dir>/notes.md` that the file exists and is non-empty; if it is missing, the run is not complete.
 
 # Task
 
