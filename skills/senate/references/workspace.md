@@ -104,11 +104,11 @@ The plan. Schema in `../../debate-agenda/references/agenda-schema.md`. YAML fron
 
 ### `context.md`
 
-Shared free-form scratchpad. Every agent reads it at the top of every turn. **Delta-only**: agents append to it via a `context-delta` block in their reply; no prose is lifted from the reply itself. See `../../moderate-debate/references/context.md`.
+Shared free-form scratchpad. Every agent reads it at the top of every turn. **Derived projection of `transcript.jsonl.context_delta`** — see "Invariants on derived projections" below; agent-side contract in `../../moderate-debate/references/context.md`.
 
 ### `agents/<cli>.md`
 
-Per-CLI private memory across turns. Only that CLI's prompts include this file. **Delta-only**: agents update it via a `private-delta` block. One file per CLI for the whole run, even if the CLI plays multiple roles.
+Per-CLI private memory across turns. Only that CLI's prompts include this file. Same derivation pattern as `context.md`, projected from `private_delta` filtered to that CLI. One file per CLI for the whole run, even if the CLI plays multiple roles.
 
 ### `agents/moderator.md`
 
@@ -118,7 +118,7 @@ This is **not** a diary, **not** a duplicate of `agenda.md`'s `## Revisions` (pl
 
 ### `transcript.jsonl`
 
-Append-only, one JSON object per line. Monotonic `turn` numbering across the whole run. Schema below. The **canonical** record; a turn's `prompt.derived.md` is one-way derived from this file's `prompt` field.
+Append-only, one JSON object per line. Monotonic `turn` numbering across the whole run. Schema below. The **canonical** record — `prompt.derived.md` derives from its `prompt` field; `context.md` / `agents/<cli>.md` derive from its `context_delta` / `private_delta` fields. **System-only**: read by the moderator, scribe, and evals (agents never read it; see "Invariants on derived projections" below).
 
 ### `state.json`
 
@@ -145,7 +145,7 @@ One directory per turn. `<NNN>` is the monotonic turn number across the whole ru
 - `prompt.derived.md` — full prompt sent to the CLI, mirrored from `transcript.jsonl`. **Do not edit.** Header reads `<!-- generated from transcript.jsonl turn N (sha256 …); do not edit -->`. Drift detection via `prompt_sha256` in the transcript line.
 - `stdout.log` — raw stdout from the CLI invocation. Always present, even when empty on a hard failure, so the per-turn directory has a stable raw-output slot.
 - `stderr.log` — raw stderr. **Only present if non-empty** (clean runs delete the empty file per `../../invoke-agent/SKILL.md`).
-- `reply.md` — cleaned reply text with fenced `context-delta` / `private-delta` / structured-output blocks stripped. The "what the agent actually said" view, suitable for human reading without the machinery.
+- `reply.md` — cleaned reply text with fenced `context-delta` / `private-delta` / structured-output blocks stripped. Byte-identical to `transcript.jsonl.text`; the human-readable mirror of the canonical bytes.
 
 For composed roles, the turn directory also contains these allowed extras:
 
@@ -179,7 +179,7 @@ Replay runs may add one top-level metadata file, `replay_manifest.json`, as desc
 
 This is the **canonical** schema. Every other file that needs to record or interpret a transcript line refers back to this.
 
-The schema below is shown across multiple lines for readability. **On disk, each transcript line MUST be a single physical line** — the JSON object must be serialized without internal newlines, with embedded newlines in `prompt` / `text` / `stderr_tail` escaped as `\n`. Multi-line records break `jq -c .` and the eval harness's per-line parser.
+The schema below is shown across multiple lines for readability. **On disk, each transcript line MUST be a single physical line** — the JSON object must be serialized without internal newlines, with embedded newlines in `prompt` / `text` / `context_delta` / `private_delta` / `stderr_tail` escaped as `\n`. Multi-line records break `jq -c .` and the eval harness's per-line parser.
 
 ```json
 {
@@ -195,10 +195,10 @@ The schema below is shown across multiple lines for readability. **On disk, each
   "completion_tokens": 612,
   "tokens_estimated": false,
   "exit_code": 0,
-  "text": "...full agent reply...",
+  "text": "...cleaned reply, byte-identical to reply.md...",
   "structured": { "vote": "yes", "reason": "..." },
-  "context_delta_appended": true,
-  "private_delta_appended": true,
+  "context_delta": "- migration cost hinges on tokenizer compatibility — see crate `tiktoken-rs` v0.5.",
+  "private_delta": "- need to double-check the GIL claim before next turn.",
   "error": null,
   "retry_count": 0,
   "stderr_tail": null,
@@ -214,8 +214,10 @@ Field notes:
 - `prompt` — the full prompt body sent to the CLI. Required for replay. Long prompts may be stored gzipped+base64 as `prompt_gz` instead.
 - `prompt_sha256` — SHA-256 of the `prompt` (or the decompressed `prompt_gz`). Used to detect drift between the canonical record and the on-disk `prompt.derived.md` mirror. Always present.
 - `tokens_estimated` — `true` when the CLI didn't report token counts and the moderator estimated from char count.
+- `text` — the cleaned reply (ANSI-stripped, fenced `context-delta` / `private-delta` / structured-output blocks removed); byte-identical to `<turn-dir>/reply.md`. On a failed turn, whatever cleaned stdout arrived (often empty).
 - `structured` — present only when the format's output contract produced a parseable machine-readable block, usually fenced JSON. Omitted when `error` is set and omitted for free-text contracts that validate `text` without producing a separate parsed object. Sourced from the per-turn subagent's `parsed_output` field (see `../../moderate-debate/SKILL.md` §4a).
-- `context_delta_appended` / `private_delta_appended` — booleans recording whether the moderator appended the deltas the subagent returned; absence of a delta is not a failure.
+- `context_delta` — string or `null`. The verbatim bytes the subagent extracted from a `context-delta` fenced block (no `[T<n>, <role>]` prefix; `null` for an absent or whitespace-only block). The canonical source for `context.md`'s shared-notes projection — see "Invariants on derived projections" below.
+- `private_delta` — string or `null`. Same shape; canonical source for `agents/<cli>.md`'s `## Memory` projection.
 - `error` — one of the codes in `../../moderate-debate/references/failures.md` (`auth`, `rate_limit`, `timeout`, `contract_violation`, `refusal`, `unknown`, `budget_exhausted`), or `null` when the turn succeeded. Sourced from the subagent's `error.kind` (or imposed by the moderator for `budget_exhausted`).
 - `retry_count` — number of CLI re-invocations the subagent performed before this line was committed (rate-limit/timeout retry, exit-0 empty-stdout retry, or contract re-prompt). `0` on first-try success.
 - `stderr_tail` — last 200 bytes of stderr when `error` is set, otherwise `null`. Already truncated by the subagent.
@@ -223,12 +225,20 @@ Field notes:
 - `retry_log_path` — relative path to the retry attempt's raw stdout log (e.g., `stages/1-parliament/turns/007-codex-mp_pro/stdout.r1.log`) when the subagent retried this turn (rate-limit/timeout retry, exit-0 empty-stdout retry, or contract re-prompt); `null` otherwise. Naming is uniform: `stdout.r1.log` next to the canonical `stdout.log`. There is at most one retry per turn under any policy, so `r2` never exists.
 - `sub_run_id` — set when the turn was filled by a composed sub-debate (per `../../debate-agenda/references/composition.md`); the value is the relative path to the sub-run dir, e.g. `stages/3-synthesize/turns/018-compose-arbiter/sub/`.
 
-Non-turn ledger lines (e.g., automatic transcript summaries, sub-transcript reads) appear with `"action": "<name>"` instead of `turn`/`role`/`cli`. Examples:
+Non-turn ledger lines (e.g., automatic transcript summaries, sub-transcript reads, shared-context summaries) appear with `"action": "<name>"` instead of `turn`/`role`/`cli`. Examples:
 
 ```json
 {"action": "summarize_transcript", "from_turn": 1, "to_turn": 6, "ts": "..."}
 {"action": "read_sub_transcript", "sub_run_id": "stages/3-synthesize/turns/018-compose-arbiter/sub/", "by_role": "judge", "ts": "..."}
+{"action": "summarize_context", "after_turn": 12, "summary": "<auto-summary text>", "ts": "..."}
 ```
+
+`summarize_context` is emitted when `context.md` hits the size cap (see `../../moderate-debate/references/context.md` § Size cap); it carries the bytes the projection logic uses to reproduce the divider and summary block.
+
+## Invariants on derived projections
+
+1. **Agents never read `transcript.jsonl`.** The only transcript bytes that reach an agent are inside the curated "transcript slice" the moderator builds at prompt-build time; cross-turn agent-visible state otherwise lives in `context.md` / `agents/<cli>.md`.
+2. **`context.md` and `agents/<cli>.md` are append-only side-effects of committing a transcript row.** Replay rule: for every row whose `context_delta` is non-null, append `[T<n>, <role>] ` + the delta to `context.md`; same for `private_delta` → `agents/<cli>.md` with `[T<n>] ` prefix; for every `summarize_context` ledger action, project its divider + summary block. The bootstrap headers the moderator writes on first start are configuration and sit above the projected region.
 
 ## `state.json` schema
 

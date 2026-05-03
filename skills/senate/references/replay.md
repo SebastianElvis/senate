@@ -18,6 +18,8 @@ Replay is **not** for exact byte-identical reproduction. LLMs are not determinis
 
 A transcript is replayable iff every turn line conforms to the canonical schema in `workspace.md` (`## transcript.jsonl schema`) — in particular, the `prompt` field (the full prompt that was sent, not just a summary) must be present. Long prompts may be stored as `prompt_gz` (gzip + base64); the moderator decompresses on replay.
 
+Because `context.md` and `agents/<cli>.md` are projections of the transcript (see `workspace.md` § Invariants on derived projections), a replay does not copy them — the moderator regenerates them from the replay transcript as the new run progresses.
+
 ## Directory layout
 
 Replayed runs live alongside the original:

@@ -22,9 +22,9 @@ Activate when:
 The run directory at `<cwd>/.senate/runs/<id>/`. Expect:
 
 - `agenda.md` — the plan (and any `## Revisions` entries).
-- `transcript.jsonl` — every turn (failure facts live here as per-turn `error` codes; there is no separate `failures.md`).
-- `context.md` — shared scratchpad accumulated during the run.
-- `agents/<cli>.md` — per-agent private memory (rarely interesting to the user, but available).
+- `transcript.jsonl` — canonical record of every turn (failure facts live here as per-turn `error` codes; there is no separate `failures.md`).
+- `context.md` — shared scratchpad accumulated during the run. Convenient skim-view; derived from the transcript's `context_delta` fields.
+- `agents/<cli>.md` — per-agent private memory (rarely interesting to the user, but available). Derived from that CLI's `private_delta` fields.
 - `agents/moderator.md` — moderator's governance log; surface non-trivial entries (re-plans, format swaps, tie-breaks) in the Process section.
 - `state.json` — final status.
 - `stages/<n>-<name>/verdict.md` for each completed stage (always present — single-stage runs have exactly one).

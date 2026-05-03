@@ -31,12 +31,21 @@ VALID_ERROR_CODES = {
 TRANSCRIPT_REQUIRED_FIELDS = {
     "turn", "stage", "role", "cli", "ts", "exit_code",
     "prompt_sha256", "text", "error", "retry_count",
+    "context_delta", "private_delta",
 }
+DELTA_FENCE_RE = re.compile(r"^```(?:context-delta|private-delta)\b", re.MULTILINE)
 STATE_REQUIRED_FIELDS = {"run_id", "status", "started_at", "stages"}
 SECTION_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 PROMPT_DERIVED_HEADER_RE = re.compile(
     r"^<!-- generated from transcript\.jsonl turn (\d+) \(sha256 ([0-9a-f]{64})\); do not edit -->\n"
 )
+CONTEXT_ENTRY_RE = re.compile(r"^\[T(\d+),\s*([^\]]+)\] ?", re.MULTILINE)
+PRIVATE_ENTRY_RE = re.compile(r"^\[T(\d+)\] ?", re.MULTILINE)
+SUMMARY_HEADING_RE = re.compile(r"^## Summary \(auto, T(\d+)\)\s*$", re.MULTILINE)
+# Boundaries that end a projection entry's body, in addition to the next entry
+# marker: section dividers (---) and any `##`-level heading (e.g. `## Summary`,
+# `## Notes`).
+ENTRY_BOUNDARY_RE = re.compile(r"^(?:---\s*$|##\s)", re.MULTILINE)
 
 
 def load_fixture(path: Path) -> tuple[dict, str]:
@@ -161,6 +170,13 @@ def check_transcript(run_dir: Path) -> dict:
             issues.append(f"line {ln}: invalid error code {err!r}")
         if err is not None:
             errors += 1
+        text = obj.get("text", "") or ""
+        if DELTA_FENCE_RE.search(text):
+            issues.append(f"line {ln}: text contains a fenced context-delta/private-delta block (must be stripped)")
+        for fld in ("context_delta", "private_delta"):
+            val = obj.get(fld, None)
+            if val is not None and not isinstance(val, str):
+                issues.append(f"line {ln}: {fld} must be string or null, got {type(val).__name__}")
         cli = obj["cli"]
         rec = by_cli.setdefault(cli, {"attempts": 0, "first_try": 0, "retried": 0, "failed": 0})
         rec["attempts"] += 1
@@ -292,8 +308,11 @@ def check_workspace_layout(run_dir: Path) -> dict:
                     issues.append(f"line {ln}: prompt.derived.md header does not match transcript")
                 elif isinstance(prompt, str) and prompt_text[header.end():] != prompt:
                     issues.append(f"line {ln}: prompt.derived.md body does not match transcript prompt")
-            if not (turn_dir / "reply.md").exists():
-                issues.append(f"line {ln}: {turn_dir.relative_to(run_dir)}/reply.md missing")
+            reply_path = turn_dir / "reply.md"
+            if not reply_path.exists():
+                issues.append(f"line {ln}: {reply_path.relative_to(run_dir)} missing")
+            elif isinstance(obj.get("text"), str) and reply_path.read_text() != obj["text"]:
+                issues.append(f"line {ln}: {reply_path.relative_to(run_dir)} bytes do not match transcript.text")
             if not (turn_dir / "stdout.log").exists():
                 issues.append(f"line {ln}: {turn_dir.relative_to(run_dir)}/stdout.log missing")
             stderr_path = turn_dir / "stderr.log"
@@ -304,6 +323,129 @@ def check_workspace_layout(run_dir: Path) -> dict:
         "check": "workspace_layout",
         "pass": not issues,
         "details": "; ".join(issues[:8]) or "ok",
+    }
+
+
+def _parse_projection(text: str, marker_re: re.Pattern) -> list[tuple[tuple, str]]:
+    """Split a projection file into ordered (key, body) entries.
+
+    `key` is whatever the regex captured (turn-only for private, turn+role for
+    shared). `body` is the bytes after the marker, up to the next marker or EOF,
+    with one trailing newline stripped if present (markers normally precede a
+    newline in append-only writes).
+    """
+    matches = list(marker_re.finditer(text))
+    out: list[tuple[tuple, str]] = []
+    for i, m in enumerate(matches):
+        key = m.groups()
+        body_start = m.end()
+        body_end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        # Also stop at the next section divider / `##` heading, in case a
+        # `summarize_context` divider appears between entries.
+        boundary = ENTRY_BOUNDARY_RE.search(text, body_start, body_end)
+        if boundary:
+            body_end = boundary.start()
+        body = text[body_start:body_end]
+        # Trim a single trailing newline so multi-line deltas compare cleanly.
+        body = body.rstrip("\n")
+        out.append((key, body))
+    return out
+
+
+def check_projection_consistency(run_dir: Path) -> dict:
+    """Verify context.md / agents/<cli>.md are exact projections of transcript.
+
+    Walks the transcript in order, builds the expected ordered list of projected
+    entries, then parses the on-disk files into entries via line-anchored
+    `[T<n>, <role>]` / `[T<n>]` markers and compares one-to-one. Also verifies
+    `summarize_context` ledger actions produce a `## Summary (auto, T<n>)`
+    heading followed by the recorded summary bytes in context.md.
+
+    The bootstrap headers above the first marker are intentionally not validated
+    (they are configuration, not projection content — see workspace.md).
+    """
+    transcript_path = run_dir / "transcript.jsonl"
+    issues: list[str] = []
+    if not transcript_path.exists():
+        return {"check": "projection_consistency", "pass": True, "details": "transcript missing; nothing to project"}
+
+    expected_context: list[tuple[tuple, str]] = []
+    expected_private: dict[str, list[tuple[tuple, str]]] = {}
+    expected_summaries: list[tuple[int, str]] = []  # (after_turn, summary_text)
+    for ln, line in enumerate(transcript_path.read_text().splitlines(), 1):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        if obj.get("action") == "summarize_context":
+            after = obj.get("after_turn")
+            summary = obj.get("summary")
+            if not isinstance(after, int) or not isinstance(summary, str):
+                issues.append(f"line {ln}: summarize_context missing after_turn (int) or summary (str)")
+                continue
+            expected_summaries.append((after, summary))
+            continue
+        if "action" in obj:
+            continue
+        turn = obj.get("turn")
+        role = obj.get("role")
+        cli = obj.get("cli")
+        cd = obj.get("context_delta")
+        pd = obj.get("private_delta")
+        if isinstance(cd, str) and cd.strip():
+            expected_context.append(((str(turn), role), cd))
+        if isinstance(pd, str) and pd.strip():
+            expected_private.setdefault(cli, []).append(((str(turn),), pd))
+
+    context_text = (run_dir / "context.md").read_text() if (run_dir / "context.md").exists() else ""
+    def _diff_entries(label: str, actual: list, expected: list) -> None:
+        if len(actual) != len(expected):
+            issues.append(f"{label}: {len(actual)} entries, expected {len(expected)}")
+            return
+        for i, (act, exp) in enumerate(zip(actual, expected)):
+            if act == exp:
+                continue
+            if act[0] != exp[0]:
+                issues.append(f"{label} entry {i+1}: key {act[0]} != expected {exp[0]}")
+            else:
+                issues.append(f"{label} entry {i+1} (key {act[0]}): body mismatch — have {act[1]!r}, want {exp[1]!r}")
+            return
+
+    _diff_entries("context.md", _parse_projection(context_text, CONTEXT_ENTRY_RE), expected_context)
+    for cli, exp_entries in expected_private.items():
+        pp = run_dir / "agents" / f"{cli}.md"
+        ptext = pp.read_text() if pp.exists() else ""
+        _diff_entries(f"agents/{cli}.md", _parse_projection(ptext, PRIVATE_ENTRY_RE), exp_entries)
+
+    # Validate summarize_context: each ledger action must produce a `## Summary
+    # (auto, T<after_turn>)` heading whose body contains the recorded summary.
+    if expected_summaries:
+        summary_headings = list(SUMMARY_HEADING_RE.finditer(context_text))
+        if len(summary_headings) != len(expected_summaries):
+            issues.append(f"context.md: {len(summary_headings)} summary headings, expected {len(expected_summaries)}")
+        else:
+            for i, ((after, summary), m) in enumerate(zip(expected_summaries, summary_headings)):
+                if int(m.group(1)) != after:
+                    issues.append(f"summary {i+1}: heading after_turn {m.group(1)}, expected {after}")
+                    continue
+                tail = context_text[m.end():]
+                next_heading = re.search(r"^##\s", tail, re.MULTILINE)
+                body = tail[: next_heading.start()] if next_heading else tail
+                if summary.strip() and summary not in body:
+                    issues.append(f"summary {i+1}: recorded summary text not found under heading T{after}")
+
+    return {
+        "check": "projection_consistency",
+        "pass": not issues,
+        "details": "; ".join(issues[:5]) or "ok",
+        "metrics": {
+            "context_deltas": len(expected_context),
+            "private_deltas": sum(len(v) for v in expected_private.values()),
+            "summaries": len(expected_summaries),
+        },
     }
 
 
@@ -483,6 +625,7 @@ def main() -> int:
     checks.append(check_state(args.run_dir))
     checks.append(check_artifact_present(args.run_dir, "notes.md"))
     checks.append(check_workspace_layout(args.run_dir))
+    checks.append(check_projection_consistency(args.run_dir))
 
     # Default assertion target: the stage verdict for the fixture's format.
     # Fixtures test whether the format produced its expected output sections,

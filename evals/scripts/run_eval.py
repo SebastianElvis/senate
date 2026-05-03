@@ -253,6 +253,8 @@ def normalize_derived_run_artifacts(run_dir: Path) -> None:
         obj.setdefault("retry_count", 0)
         obj.setdefault("error", None if obj.get("exit_code") == 0 else "unknown")
         obj.setdefault("stderr_tail", None if obj.get("error") is None else "")
+        obj.setdefault("context_delta", None)
+        obj.setdefault("private_delta", None)
 
         turn = obj.get("turn")
         stage = obj.get("stage")
