@@ -23,7 +23,7 @@ A single-stage run still gets a `stages/` directory with one entry. The filesyst
         agenda.md            # the plan (written by debate-agenda)
         context.md           # shared scratchpad — delta-only, every agent reads each turn
         transcript.jsonl     # canonical append-only per-turn record (`prompt` inline + `prompt_sha256`)
-        state.json           # current status (running / paused_at_checkpoint / completed / stalled / aborted / revising)
+        state.json           # current status (running / paused_at_checkpoint / completed / stalled / aborted / revising / partial)
         notes.md             # user-facing summary written by meeting-note (merges old verdict.md + meeting-notes.md)
         agents/
           moderator.md       # moderator's governance log — narrow, policy-focused, cross-links turn/stage IDs
@@ -45,7 +45,7 @@ A single-stage run still gets a `stages/` directory with one entry. The filesyst
                 ...
 ```
 
-**Writer ownership.** The moderator owns top-level files (`agenda.md` indirectly via planner callbacks, `context.md`, `transcript.jsonl`, `state.json`, `bindings.json`, `agents/<cli>.md`, `agents/moderator.md`) and per-stage `stages/<n>-<name>/verdict.md`. Each per-turn subagent owns `stages/<n>-<name>/turns/<NNN>-<cli>-<role>/{prompt.derived.md, stdout.log, stderr.log, reply.md}` for the turn it ran (see `../../moderate-debate/SKILL.md` §4a). `stdout.log` is always kept (so `log_path` on dispatched CLI transcript lines resolves); `stderr.log` is kept only when non-empty. Any retry the subagent performs — contract re-prompt, `rate_limit`/`timeout` retry, or exit-0 empty-stdout retry per `../../moderate-debate/references/failures.md` — produces sibling files `stdout.r1.log` (and `stderr.r1.log` if non-empty); only one retry per turn is allowed under any policy, so `r2` never exists. The moderator never opens any of these per-turn files at runtime — they are for replay and debugging only — but it records `log_path` (and `retry_log_path` when present) on the corresponding `transcript.jsonl` line.
+**Writer ownership.** The moderator owns top-level files (`agenda.md` indirectly via planner callbacks, `context.md`, `transcript.jsonl`, `state.json`, `bindings.json`, `agents/<cli>.md`, `agents/moderator.md`), per-stage `stages/<n>-<name>/verdict.md`, and the per-turn `prompt.derived.md` (written before the subagent is dispatched, so the prompt-bytes ↔ `prompt_sha256` invariant is frozen — see `../../moderate-debate/SKILL.md` §3 step c). Each per-turn subagent owns `stages/<n>-<name>/turns/<NNN>-<cli>-<role>/{stdout.log, stderr.log, reply.md}` for the turn it ran (see `../../moderate-debate/SKILL.md` §4a). `stdout.log` is always kept (so `log_path` on dispatched CLI transcript lines resolves); `stderr.log` is kept only when non-empty. Any retry the subagent performs — contract re-prompt, `rate_limit`/`timeout` retry, or exit-0 empty-stdout retry per `../../moderate-debate/references/failures.md` — produces sibling files `stdout.r1.log` (and `stderr.r1.log` if non-empty); only one retry per turn is allowed under any policy, so `r2` never exists. The moderator never opens any of these per-turn files at runtime — they are for replay and debugging only — but it records `log_path` (and `retry_log_path` when present) on the corresponding `transcript.jsonl` line.
 
 Exception: if a per-turn subagent crashes or returns malformed data before creating its first-attempt `stdout.log`, the moderator may create an empty synthetic `stages/<n>-<name>/turns/<NNN>-<cli>-<role>/stdout.log` solely to preserve the dispatched-turn `log_path` invariant. This is the only moderator write to a per-turn `stdout.log`; the transcript line should also record `error: "unknown"` and a synthetic `stderr_tail` such as `subagent_crash`.
 
@@ -168,10 +168,10 @@ Named values extracted from each stage's verdict per the agenda's `output_bindin
 
 For migration clarity, the following files **no longer exist** at top level:
 
-- **`verdict.md`** — merged into `notes.md`. Stage-level `stages/<n>/verdict.md` still exists as the bindings target.
+- **`verdict.md`** — merged into `notes.md`. Stage-level `stages/<n>-<name>/verdict.md` still exists as the bindings target.
 - **`meeting-notes.md`** — merged into `notes.md`.
 - **`failures.md`** — failures are recorded per-turn in `transcript.jsonl` (the `error` / `stderr_tail` / `retry_count` fields). The scribe surfaces a failure rollup inside `notes.md` if any turns errored.
-- **`sub/`** — sub-debates are no longer a top-level peer. They live under the turn that spawned them, at `stages/<n>/turns/<NNN>-compose-<role>/sub/`.
+- **`sub/`** — sub-debates are no longer a top-level peer. They live under the turn that spawned them, at `stages/<n>-<name>/turns/<NNN>-compose-<role>/sub/`.
 
 Replay runs may add one top-level metadata file, `replay_manifest.json`, as described in `replay.md`. That file is replay provenance, not a live-run artifact.
 
@@ -247,7 +247,7 @@ This is the **canonical** schema. Every other file that needs to record or inter
 ```json
 {
   "run_id": "2026-04-27-1432-parliament",
-  "status": "running" | "paused_at_checkpoint" | "completed" | "stalled" | "aborted" | "revising",
+  "status": "running" | "paused_at_checkpoint" | "completed" | "stalled" | "aborted" | "revising" | "partial",
   "started_at": "2026-04-27T14:32:05Z",
   "last_activity_at": "2026-04-27T14:47:11Z",
   "completed_at": null,
@@ -283,7 +283,7 @@ This is the **canonical** schema. Every other file that needs to record or inter
 
 Field notes:
 
-- `status` — top-level status of the whole run.
+- `status` — top-level status of the whole run. `partial` is reserved for branched pipelines whose merge policy tolerates some-but-not-all branches succeeding (see `../../debate-agenda/references/branching.md`).
 - `current_stage` — the index of the in-progress (or paused) stage. Always at least `1`.
 - `stages_completed` / `stages_pending` — flat lists of indices, kept in sync with `stages[*].status`.
 - `stages` — per-stage detail. Always at least one entry, even for single-stage runs.

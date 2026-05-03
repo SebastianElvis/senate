@@ -142,9 +142,15 @@ Produce the brainstorm verdict as a markdown document with sections:
 - **Recommended next step** — which option(s) warrant further exploration, and why. May recommend multiple.
 - **Dropped clusters** — any cluster worth naming that didn't make top-k, with one line on why.
 - **Open questions** — what a follow-up brainstorm or decision-format should tackle.
+
+Then append a fenced json block summarizing the selection, no other prose after it:
+
+```json
+{"top_options": ["..."], "recommended_next_format": "parliament" | "court" | "committee" | null, "dropped_count": 0}
+```
 ```
 
-Output contract: markdown with those four sections. The facilitator's reply becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
+Output contract: markdown with those four sections, **followed by** a trailing fenced `json` block. The facilitator's reply becomes the synthesis content. The moderator writes it to `stages/<N>-<name>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`. Downstream stages may bind `fenced-json.top_options`.
 
 ## Termination
 

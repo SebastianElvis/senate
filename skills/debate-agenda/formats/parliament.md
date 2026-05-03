@@ -114,7 +114,7 @@ Then append a fenced json block with the structured outcome, no other prose afte
 ```
 ```
 
-Output contract: markdown with the three sections above, **followed by** a fenced `json` block matching the schema. The speaker's reply becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (the bindings target — schema in `../../meeting-note/references/verdict-schema.md`); the scribe (`meeting-note`) then folds it into the run-wide `notes.md`. Downstream stages may bind `fenced-json.outcome` and `fenced-json.tally`.
+Output contract: markdown with the three sections above, **followed by** a fenced `json` block matching the schema. The speaker's reply becomes the synthesis content. The moderator writes it to `stages/<N>-<name>/verdict.md` (the bindings target — schema in `../../meeting-note/references/verdict-schema.md`); the scribe (`meeting-note`) then folds it into the run-wide `notes.md`. Downstream stages may bind `fenced-json.outcome` and `fenced-json.tally`.
 
 ## Termination
 

@@ -121,7 +121,7 @@ Invoke `../moderate-debate/`. It reads `agenda.md` and runs the debate to comple
 
 When the moderator returns `status: completed` (or `stalled` / `aborted` with whatever was produced), invoke `../meeting-note/`. It writes the single user-facing `notes.md`.
 
-This step is **not optional** — `notes.md` is the only user-facing artifact, and the eval harness's `notes_md_present` check fails the entire run if it is missing or empty. Even an aborted or stalled run must produce a `notes.md` so the user has a single place to read what happened. Specifically:
+This step is **not optional** — `notes.md` is the only user-facing artifact, and the eval harness's `notes_md_present` check fails the entire run if it is missing or empty. Even an aborted or stalled run that started moderation must produce a `notes.md` so the user has a single place to read what happened. The one exception is the pre-debate cancel path (step 2.5 case (c) "cancel"): that path never enters step 3, never enters step 4, and does not invoke `meeting-note` — there is nothing to summarize. Once moderation begins, the disposition (completed / stalled / aborted / partial) does not change this requirement. Specifically:
 
 1. After the moderator returns, do **not** report back to the user yet. First load `../meeting-note/SKILL.md` and follow it to write `<run-dir>/notes.md`.
 2. After meeting-note returns, run a verification check: `test -s "<run-dir>/notes.md"` must succeed (file exists AND is non-empty).

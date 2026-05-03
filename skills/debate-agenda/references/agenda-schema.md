@@ -85,7 +85,7 @@ open_questions: []
 | `index` | int | yes | 1-indexed. Monotonic across `stages`. |
 | `name` | string | yes | Short, lowercase, hyphenated. Becomes a directory name. |
 | `format` | string | yes | One of the formats in `../formats/`: `parliament`, `court`, `red-team`, `peer-review`, `committee`, `brainstorm`. |
-| `roster` | list | yes | Each entry: `{ role, cli, model? }`. Roles must match the format's role list. |
+| `roster` | list | yes | Each entry: `{ role, cli, model? }`. Roles named here must appear in the format's role list, but a role filled by a sub-debate (declared under `composition`) is omitted from `roster` — `roster` and `composition` together must cover the format's required roles. See `composition.md`. |
 | `rounds` | int | no | Falls back to the format's default. |
 | `budget` | object | no | `wall_clock_sec`, `total_tokens`, `turn_timeout_sec`. Falls back to defaults in `../../moderate-debate/references/budget.md`. |
 | `input_bindings` | list | no | Names of bindings this stage consumes from prior stages. |
@@ -175,7 +175,7 @@ Before returning `status: ready`, the planner validates:
 
 - Every `cli` in every roster has a file at `../../invoke-agent/references/<cli>.md`.
 - Every stage `format` has a format file at `../formats/<format>.md`.
-- Every role named in a roster appears in that format's role list.
+- Every role named in a roster appears in that format's role list, and the union of roster roles + `composition` roles covers every role the format requires.
 - Every `input_bindings` entry refers to an `output_bindings` name from an earlier stage.
 - Stage indices are monotonic from 1.
 

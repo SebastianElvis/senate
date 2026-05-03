@@ -120,9 +120,15 @@ Produce a markdown document with sections:
 - **Decision** — one of: sustain (prosecution wins), dismiss (defense wins), remand (unresolved, needs more info).
 - **Reasoning** — weigh the strongest points from each side, cite turn numbers.
 - **Dissent** — the strongest argument you ruled against, fairly stated.
+
+Then append a fenced json block with the structured outcome, no other prose after it:
+
+```json
+{"decision": "sustain" | "dismiss" | "remand", "reasoning_turns": [1, 4, 7], "dissent": "..."}
+```
 ```
 
-Output contract: markdown with those three sections. The judge's ruling becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
+Output contract: markdown with those three sections, **followed by** a fenced `json` block matching the canonical `ruling` contract in `../../moderate-debate/references/contracts.md`. On contract failure, the per-turn subagent re-prompts once if the turn's retry budget is still available; fallback ruling is `remand`. The judge's ruling becomes the synthesis content. The moderator writes it to `stages/<N>-<name>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`. Downstream stages may bind `fenced-json.decision`.
 
 ## Termination
 

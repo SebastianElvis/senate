@@ -125,7 +125,7 @@ Shared comes before private so the agent integrates the public state first, then
 
 ## What does NOT belong in context files
 
-- **The verdict.** The synthesis content comes from the in-format synthesizer role (speaker / judge / editor / arbiter / synthesizer); the moderator writes it to `stages/<N>/verdict.md` (the bindings target), and the scribe folds it into the run-wide `notes.md`.
+- **The verdict.** The synthesis content comes from the in-format synthesizer role (speaker / judge / editor / arbiter / synthesizer); the moderator writes it to `stages/<N>-<name>/verdict.md` (the bindings target), and the scribe folds it into the run-wide `notes.md`.
 - **Per-turn output for the record.** That's `transcript.jsonl`.
 - **Bindings between stages.** Those are extracted from `verdict.md` per the agenda's `output_bindings`.
 - **Long quotes from the original artifact.** The artifact is in the prompt header or referenced by path; don't re-quote it into the scratchpad.

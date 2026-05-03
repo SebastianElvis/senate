@@ -27,7 +27,7 @@ Each format documents these sections in order:
 6. **Termination** — when the debate ends.
 7. **Defaults** — recommended rounds, roster size limits, fallback behavior.
 
-Synthesis is named per-format (speaker / judge / editor), and that role's reply becomes the stage's verdict. The moderator writes the synthesis content to `stages/<N>/verdict.md` (the bindings target); the scribe (`meeting-note`) folds it into the run-wide `notes.md` after the run.
+Synthesis is named per-format (speaker / judge / editor), and that role's reply becomes the stage's verdict. The moderator writes the synthesis content to `stages/<N>-<name>/verdict.md` (the bindings target); the scribe (`meeting-note`) folds it into the run-wide `notes.md` after the run.
 
 ## Multi-stage pipeline recipes
 

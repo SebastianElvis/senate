@@ -125,7 +125,7 @@ Output contract: markdown + trailing fenced json:
 {"decision": "accept" | "minor_revision" | "major_revision" | "reject", "revision_deadline_days": 30}
 ```
 
-On contract failure, fallback to `major_revision`. The editor's decision becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
+On contract failure, fallback to `major_revision`. The editor's decision becomes the synthesis content. The moderator writes it to `stages/<N>-<name>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
 
 ## Termination
 

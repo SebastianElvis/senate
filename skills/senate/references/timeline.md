@@ -6,17 +6,15 @@ This is a senate-level concern (not a moderate-debate concern) because resumabil
 
 ## `state.json` is the source of truth
 
-Every run has a `state.json` written at every stage boundary and every checkpoint. On resume, senate reads this file to know where to pick up. The full schema and the meaning of every status value live in `workspace.md` (`## state.json schema`); this file only adds the time-spanning resume semantics that don't fit there.
+Every run has a `state.json` written at every turn boundary (heartbeat — `last_activity_at` only) plus a full re-write at every stage boundary and every checkpoint. On resume, senate reads this file to know where to pick up. The full schema, write cadence, and the meaning of every status value live in `workspace.md` (`## state.json schema` and `### state.json`); this file only adds the time-spanning resume semantics that don't fit there.
 
 ## Resume
 
 User resumes via the host: *"Resume run `<run-id>`"*. Senate's resume procedure:
 
 1. Read `state.json`. Validate the agenda still parses against `../../debate-agenda/references/agenda-schema.md`.
-2. Verify the agenda's frontmatter SHA still matches what was recorded at pause. If the agenda file has been edited since pause, warn the user; offer continue-with-current-agenda or abort.
-3. Re-read all completed stages' `stages/<n>/verdict.md` files (they may have been edited by the user during a `revise`).
-4. Re-extract bindings into `bindings.json`.
-5. Hand off to `../../moderate-debate/` with the run dir. The moderator handles the actual continuation.
+2. If `agenda.md`'s mtime is newer than `state.json.last_activity_at`, the agenda was edited during the pause — warn the user and offer continue-with-current-agenda or abort.
+3. Hand off to `../../moderate-debate/` with the run dir. The moderator owns the rest of the continuation flow: re-reading completed stages' `stages/<n>-<name>/verdict.md` (they may have been edited during a `revise`), re-extracting bindings into `bindings.json`, and resuming from the next unfinished stage per `../../moderate-debate/references/checkpoints.md` § Resume.
 
 ## Crash recovery
 
@@ -24,7 +22,7 @@ If senate's host session crashes mid-stage:
 
 - `state.json` may show `status: running` even though no process is alive.
 - On next resume, senate detects this by checking `last_activity_at` — if > 1h ago and status is `running`, assume the previous session crashed.
-- The current stage's partial artifacts (if any) move to `stages/<N>-<name>.partial/`; the stage restarts with a fresh attempt on resume.
+- The current stage's in-progress artifacts (if any) move to `stages/<N>-<name>.crashed/`; the stage restarts with a fresh attempt on resume. (The `.partial` suffix is reserved for branched-pipeline partial completion — see `../../debate-agenda/references/branching.md`.)
 - This rollback burns the stage's budget allocation.
 
 ## Time-based triggers
@@ -34,15 +32,14 @@ Some pipelines benefit from calendar-based pauses:
 - An RFC's comment period is 7 days.
 - A postmortem review should happen 48h after the incident is resolved.
 
-The agenda may declare these as conditional checkpoints with a time-based condition:
+The agenda may declare these as conditional checkpoints with a time-based condition (grammar in `../../moderate-debate/references/checkpoints.md` § `conditional`):
 
 ```yaml
 checkpoint: conditional
 condition: "time_since_stage_start > 7d"
-action: "proceed_when_met"
 ```
 
-Senate does not autonomously wake up at `+7d`; it just refuses to proceed until the condition is met. The user (or an external scheduler) triggers resume after the time has passed.
+Senate does not autonomously wake up at `+7d`; the moderator just refuses to proceed past the checkpoint until the condition evaluates true. The user (or an external scheduler) triggers resume after the time has passed.
 
 For actual scheduling, pair with the host agent's scheduling capabilities (e.g., Claude Code's `CronCreate` / `ScheduleWakeup`, or a system `cron` job invoking the host to resume the run).
 
@@ -50,7 +47,7 @@ For actual scheduling, pair with the host agent's scheduling capabilities (e.g.,
 
 For runs that span days:
 
-- **Verdicts must be self-contained.** Someone reading `notes.md` (or any `stages/<n>/verdict.md`) a week later should not need to reconstruct context from memory.
+- **Verdicts must be self-contained.** Someone reading `notes.md` (or any `stages/<n>-<name>/verdict.md`) a week later should not need to reconstruct context from memory.
 - **Transcripts are canonical.** If bindings are ambiguous later, re-extract from the transcript rather than relying on summaries.
 - **Model versions drift.** A run started on 2026-04-20 may finish on 2026-04-27 with a subtly different model version. The agenda records the CLI + model string for every stage; accept that cross-day runs are not perfectly reproducible.
 - **Shared context grows.** Long-running runs may have a large `context.md` by the time they finish. The auto-summary mechanism in `../../moderate-debate/references/context.md` keeps later turns tractable.

@@ -135,7 +135,7 @@ Humans organize debate hierarchically. A single senator's position is informed b
 
 - **Sub-debates.** Any role in any format can be filled not by a single CLI but by a *format invocation*. "The prosecution role is filled by a 3-agent `committee`" — the orchestrator spawns that sub-debate, captures its verdict, and uses it as the prosecution's contribution.
 - **Budget propagation.** A sub-debate inherits a fraction of the parent's token/time budget.
-- **Nested transcripts.** Sub-runs are embedded under the triggering turn at `.senate/runs/<parent-id>/stages/<n>/turns/<NNN>-compose-<role>/sub/`. Parent verdicts reference the relative path to the sub-run.
+- **Nested transcripts.** Sub-runs are embedded under the triggering turn at `.senate/runs/<parent-id>/stages/<n>-<name>/turns/<NNN>-compose-<role>/sub/`. Parent verdicts reference the relative path to the sub-run.
 - **Private deliberation.** A sub-debate's transcript is not automatically visible to peer roles at the parent level — only its output. This matches human norms (jury room privacy).
 - **Composition library.** Pre-baked "combined" formats: `supreme-court` (3-judge panel, each judge is a private `committee`), `two-party-parliament` (each party is a `committee`), etc.
 
