@@ -26,7 +26,7 @@ awk '/^```json$/{buf="";cap=1;next} /^```$/{if(cap){last=buf;cap=0}} cap{buf=buf
 
 If no fenced block is present, fall back to scanning for the first `{` that parses as JSON through end-of-reply. If neither works, it's a contract violation.
 
-The same extraction approach applies to the `context-delta` and `private-delta` blocks defined in `context.md`, only the fence label is `context-delta` / `private-delta` instead of `json`. Their absence is **not** a contract violation — they are optional.
+The same extraction approach applies to the `context-delta` and `private-delta` blocks (fence label is the only difference); the subagent returns each verbatim string as `context_delta` / `private_delta` and the moderator commits and projects per `../SKILL.md` §4a. Their absence is **not** a contract violation — they are optional.
 
 ## Validation
 

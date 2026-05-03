@@ -85,10 +85,11 @@ User resumes via the host agent: *"Resume run `<run-id>`"*. `senate` invokes the
 Moderator procedure on resume:
 
 1. Read `state.json`. Confirm `status == paused_at_checkpoint`.
-2. Read the most recent stage's `verdict.md` (re-read, in case user edited).
-3. Re-extract `output_bindings` per the agenda's stage spec.
-4. If bindings changed, update `bindings.json` and bump a snapshot version.
-5. Continue from `checkpoint.next_stage`.
+2. **Reconcile derived projections from the transcript.** A crash between transcript append and projection write (see `../SKILL.md` § Commit pattern) can leave `context.md` / `agents/<cli>.md` lagging the transcript by one entry. Before building any new prompt, walk `transcript.jsonl` end-to-end and rewrite both files from the transcript's `context_delta` / `private_delta` fields and `summarize_context` ledger actions per `../../senate/references/workspace.md` § Invariants on derived projections. The transcript is the source of truth; the `.md` files are regenerated. (This is a no-op for clean shutdowns and idempotent if run twice.)
+3. Read the most recent stage's `verdict.md` (re-read, in case user edited).
+4. Re-extract `output_bindings` per the agenda's stage spec.
+5. If bindings changed, update `bindings.json` and bump a snapshot version.
+6. Continue from `checkpoint.next_stage`.
 
 If the user wants to resume with overrides (different CLI, different budget), they say so; the moderator passes the overrides through `debate-agenda` for an agenda revision before continuing.
 

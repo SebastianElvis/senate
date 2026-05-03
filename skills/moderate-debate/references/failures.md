@@ -36,8 +36,9 @@ Failed turns still write a line to `transcript.jsonl`. The full schema is canoni
 - `error` — set to one of the codes above; `null` on success.
 - `retry_count` — number of retries attempted before the line was committed; `0` on first-try success.
 - `stderr_tail` — last 200 bytes of stderr when `error` is set; never the whole stream.
-- `text` — whatever stdout did arrive (may be empty).
+- `text` — whatever cleaned stdout did arrive (may be empty); same cleaning rule as on success.
 - `structured` — omitted when `error` is set.
+- `context_delta` / `private_delta` — usually `null` on failed turns; if a parseable block did arrive before the error, it's committed as on success.
 
 Example failed-turn line:
 
@@ -53,6 +54,8 @@ Example failed-turn line:
   "error": "rate_limit",
   "retry_count": 1,
   "text": "",
+  "context_delta": null,
+  "private_delta": null,
   "stderr_tail": "HTTP 429: quota exceeded",
   "log_path": "stages/1-parliament/turns/007-gemini-mp_con/stdout.log",
   "retry_log_path": "stages/1-parliament/turns/007-gemini-mp_con/stdout.r1.log"

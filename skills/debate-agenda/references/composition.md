@@ -83,6 +83,8 @@ When the parent stage reaches a turn for a composed role:
      "exit_code": 0,
      "sub_run_id": "stages/1-court/turns/003-compose-judge/sub/",
      "text": "{child verdict text}",
+     "context_delta": null,
+     "private_delta": null,
      "error": null,
      "retry_count": 0,
      "completion_tokens": 18432,
@@ -90,6 +92,8 @@ When the parent stage reaches a turn for a composed role:
      "retry_log_path": null
    }
    ```
+
+   Composed-role parent turns typically have `context_delta: null` / `private_delta: null` — sub-debate deltas live in the sub-run's own transcript and projections.
 
 ## Privacy
 

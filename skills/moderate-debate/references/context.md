@@ -1,17 +1,17 @@
 # Shared and private context
 
-A debate's participants need somewhere to share intermediate state that doesn't fit cleanly into the structured per-turn record. The transcript is for the public record (one line per turn, structured); the context files are for working memory.
+The transcript owns all meaning; `context.md` and `agents/<cli>.md` are the **agent-facing projections** of the transcript at two visibility scopes (see "Invariants on derived projections" in `../../senate/references/workspace.md`). This file describes the agent-side contract — fence labels, prefixes, delta-only discipline.
 
-There are two kinds:
+Two scopes:
 
-- **Shared context** — `context.md`, one per run. Free-form. Every agent reads it at the top of every turn; agents append to it **only** via a `context-delta` fenced block in their reply. The per-turn subagent extracts the block and returns it as `context_delta`; the moderator appends to `context.md`.
-- **Private memory** — `agents/<cli>.md`, one per CLI in the roster. Free-form. Only that CLI reads its own file; the per-turn subagent extracts a `private-delta` fenced block from the CLI's reply and returns it as `private_delta`, and the moderator appends to `agents/<cli>.md`. (Both writers — extraction and append — are described in `../SKILL.md` §4a.)
+- **Shared** — `context.md`, one per run. Every agent reads it at the top of every turn. Agents emit `context-delta` fenced blocks in their replies; the per-turn subagent extracts the verbatim string and returns it as `context_delta`; the moderator commits it to the transcript row and projects it into `context.md` with a `[T<n>, <role>]` prefix.
+- **Private** — `agents/<cli>.md`, one per CLI. Only that CLI reads its own file. Same flow with `private-delta` / `private_delta` and a `[T<n>]` prefix.
 
-These files are deliberately unstructured. They are scratchpads, not databases. The transcript and bindings carry the structured signal.
+Both files are free-form scratchpads, not databases. The transcript and bindings carry the structured signal.
 
 ### Delta-only discipline
 
-`context.md` and `agents/<cli>.md` hold **only** what the agent emitted inside `context-delta` / `private-delta` blocks. The moderator must not lift prose from the agent's main reply into either file — the full reply already lives in `transcript.jsonl` (`text` field) and on disk at `stages/<n>/turns/<NNN>-<cli>-<role>/reply.md`. Three storage locations for "what the agent said this turn" would invite drift; one canonical (the transcript), one human-readable (`reply.md`), and the scratchpads carry only what the agent explicitly chose to broadcast.
+The moderator must not lift prose from the agent's main reply into either projection — the full cleaned reply already lives in `transcript.jsonl.text` (and is mirrored to `<turn-dir>/reply.md`). The projections carry only what the agent explicitly chose to broadcast at each visibility scope.
 
 ## `context.md` — shared scratchpad
 
@@ -42,7 +42,7 @@ After your main reply, you may emit a `context-delta` fenced block:
 Use it for: pointers to evidence ("see line 42 of the diff"), open questions you want others to address, partial findings that aren't yet a position. Don't repeat what's in your main reply — others will read that in the transcript.
 ```
 
-After the turn, the per-turn subagent extracts the `context-delta` block from the CLI reply (the moderator never opens the raw log) and returns it as `context_delta` in its result. The moderator then appends it to `context.md` under the `## Notes` section, prefixed with `[T<turn>, <role>]`:
+After the turn, the moderator commits the extracted string to `transcript.jsonl.context_delta` and projects it under `## Notes` with the turn marker (full commit pattern in `../SKILL.md` §4a). Example projection:
 
 ```markdown
 - [T3, mp_pro] Migration cost estimate hinges on tokenizer compatibility — see crate `tiktoken-rs` v0.5.
@@ -70,7 +70,9 @@ The debate has so far surfaced: <3 bullet points>. Notes above this divider are 
 
 ```
 
-The divider preserves the audit trail; the summary becomes the de facto starting point for subsequent agents that don't want to reread everything.
+The divider preserves the audit trail; the summary becomes the de facto starting point for subsequent agents.
+
+To keep the projection invariant intact, the moderator pairs the on-disk insertion with a `summarize_context` ledger row in `transcript.jsonl` (see the non-turn ledger examples in `../../senate/references/workspace.md`). Replaying the transcript reproduces the divider + summary block.
 
 ## `agents/<cli>.md` — private memory
 
@@ -100,7 +102,7 @@ After your main reply (and after any `context-delta`), you may emit a `private-d
 Use it for: your evolving private theory, things you don't want to share yet, notes-to-self.
 ```
 
-The per-turn subagent extracts the `private-delta` block (returned as `private_delta` in its result); the moderator appends it to `agents/<cli>.md` under `## Memory`, prefixed with `[T<turn>]`. Same append-only discipline as shared context.
+Same flow as shared context, with `private-delta` / `private_delta` and the `[T<turn>] ` prefix under `## Memory`.
 
 ### One file per CLI, not per role
 
