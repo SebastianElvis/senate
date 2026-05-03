@@ -70,7 +70,7 @@ When the user says *"replay run X, swapping role R to CLI C"*:
 
 ## What does NOT require replay
 
-- Re-reading `notes.md` (or any `stages/<n>/verdict.md`) from a past run.
+- Re-reading `notes.md` (or any `stages/<n>-<name>/verdict.md`) from a past run.
 - Resuming a paused run from a checkpoint — that's resume, not replay (handled by `../../moderate-debate/references/checkpoints.md`).
 - Running the same format on a fresh task — that's just a new run.
 

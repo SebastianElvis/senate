@@ -46,7 +46,8 @@ context.md                                 # shared prompt-feed view, projection
 transcript.jsonl                           # append-only canonical per-turn record (system-only; agents never read it) — moderator writer
 agents/moderator.md                        # moderator's governance log (you write this)
 agents/<cli>.md                            # per-CLI private prompt-feed view, projection of transcript.private_delta — moderator writer
-stages/<n>-<name>/turns/<NNN>-<cli>-<role>/{prompt.derived.md,stdout.log,stderr.log,reply.md}  # per-turn subagent writer
+stages/<n>-<name>/turns/<NNN>-<cli>-<role>/prompt.derived.md  # moderator writer (frozen before dispatch; see step 3.c)
+stages/<n>-<name>/turns/<NNN>-<cli>-<role>/{stdout.log,stderr.log,reply.md}  # per-turn subagent writer
 ```
 
 On first start of a run:
@@ -221,7 +222,7 @@ When a stage's termination condition fires (per the format file), the moderator:
 - Extracts `output_bindings` and writes them to `<run-dir>/bindings.json` (cumulative across stages).
 - Honors any checkpoint declared on this stage.
 
-The moderator does **not** write the top-level `<run-dir>/notes.md` — that is `meeting-note`'s job. The format-level "speaker writes the verdict" wording refers to the synthesis turn's *content production*; the moderator writes that content to `stages/<N>/verdict.md` (the bindings target), and the scribe folds it into `notes.md` after the run.
+The moderator does **not** write the top-level `<run-dir>/notes.md` — that is `meeting-note`'s job. The format-level "speaker writes the verdict" wording refers to the synthesis turn's *content production*; the moderator writes that content to `stages/<N>-<name>/verdict.md` (the bindings target), and the scribe folds it into `notes.md` after the run.
 
 ### 7. Hand off
 
@@ -230,7 +231,7 @@ When the last stage finishes:
 - Update `<run-dir>/state.json`: `status: completed`, `completed_at: "..."`. Full schema in `../senate/references/workspace.md` (`## state.json schema`).
 - Return to `senate` with a one-line summary and the path to the run dir.
 
-`senate` then invokes `meeting-note`, which writes the user-facing `notes.md` (the merged file that replaces the old `verdict.md` + `meeting-notes.md` pair). The moderator never writes `notes.md`. The moderator does write per-stage `stages/<n>/verdict.md` files (the bindings target).
+`senate` then invokes `meeting-note`, which writes the user-facing `notes.md` (the merged file that replaces the old `verdict.md` + `meeting-notes.md` pair). The moderator never writes `notes.md`. The moderator does write per-stage `stages/<n>-<name>/verdict.md` files (the bindings target).
 
 ## Single-stage vs multi-stage
 

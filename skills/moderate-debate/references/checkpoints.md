@@ -24,7 +24,14 @@ The agenda always pauses after this stage. User must explicitly resume. Use for:
 
 The stage declares a condition on its own output; the moderator evaluates it and pauses iff true.
 
-The condition expression grammar is uniform across all checkpoint files: every condition starts with `stage.verdict.` (the synthesis turn's structured JSON), `stage.bindings.<name>` (a value from the stage's `output_bindings`), or `stage.failures` (count of `error`-coded transcript lines for this stage). Bare binding names without a `stage.` prefix are not valid.
+The condition expression grammar is uniform across all checkpoint files: every condition starts with one of:
+
+- `stage.verdict.<field>` — the synthesis turn's structured JSON.
+- `stage.bindings.<name>` — a value from the stage's `output_bindings`.
+- `stage.failures` — count of `error`-coded transcript lines for this stage.
+- `time_since_stage_start` — wall-clock duration since the stage started, expressed with a duration suffix (`s`, `m`, `h`, `d`). Used for calendar-based gates like an RFC comment period; the moderator does not autonomously wake at the deadline (see `../../senate/references/timeline.md`).
+
+Bare binding names without one of these prefixes are not valid.
 
 Common conditions:
 
@@ -32,6 +39,7 @@ Common conditions:
 - `stage.verdict.confidence < 0.5` — low-confidence result.
 - `stage.bindings.resolution_rate < 0.5` — too many open comments.
 - `stage.failures > 2` — too many agent failures to trust the output.
+- `time_since_stage_start > 7d` — refuse to proceed until 7 days have passed since the stage started.
 
 In the agenda's stage frontmatter:
 
@@ -45,7 +53,7 @@ condition: "stage.verdict.confidence < 0.5"
 When paused, the moderator presents:
 
 1. **What just happened** — stage name, verdict disposition, number of turns, wall-clock, token usage.
-2. **Verdict preview** — first 40 lines of `<run-dir>/stages/<N>/verdict.md`, with a link to the full file.
+2. **Verdict preview** — first 40 lines of `<run-dir>/stages/<N>-<name>/verdict.md`, with a link to the full file.
 3. **What's next** — the name of the next stage and its roster.
 4. **Remaining budget** — wall-clock and tokens left in the global cap.
 5. **User options** — continue / revise / abort / modify-roster.
@@ -55,7 +63,7 @@ Example surface:
 ```markdown
 ⏸ Paused at checkpoint after stage 2 (review).
 
-**Just completed:** stage 2 (review) — disposition: finalized, 3 commenters, 412s wall-clock, 98k tokens.
+**Just completed:** stage 2 (review) — disposition: completed, 3 reviewers, 412s wall-clock, 98k tokens.
 
 **Next stage:** 3 (synthesize) — roster: member=claude, editor=claude.
 
@@ -97,7 +105,7 @@ If the user wants to resume with overrides (different CLI, different budget), th
 
 - **`continue`** — proceed to `checkpoint.next_stage`.
 - **`revise`** — moderator sets `status: revising`. User edits `verdict.md` and any relevant turn files manually, then says "resume". Moderator re-extracts bindings from the edited verdict and continues. The moderator does **not** re-run the prior stage. Revise is a human edit, not a re-debate.
-- **`modify-roster`** — change who plays which role in the next stage. Moderator updates the agenda's roster (with a `## Revisions` entry) and resumes.
+- **`modify-roster`** — change who plays which role in the next stage. The moderator calls back to `../../debate-agenda/` with the requested change; the planner (sole writer of `agenda.md`) appends a `## Revisions` entry and rewrites the file. The moderator then resumes from the next unfinished stage.
 - **`re-plan`** — moderator calls `../../debate-agenda/` with the prior agenda + recent transcript slice + the user's reason. The planner returns a revised agenda with a new `## Revisions` entry and `status: ready` (so the moderator can resume immediately). Completed stages are immutable; their verdicts and bindings remain.
 - **`abort`** — `status: aborted`. All artifacts preserved. Run directory is renamed from `<id>` to `<id>.aborted` to make it obvious in listings.
 

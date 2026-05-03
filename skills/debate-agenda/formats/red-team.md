@@ -117,7 +117,7 @@ Output contract: markdown + trailing fenced json:
 {"ruling": "survives" | "survives_with_mitigations" | "fails", "unresolved_count": 0, "confidence": 0.0-1.0}
 ```
 
-The judge's ruling becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
+The judge's ruling becomes the synthesis content. The moderator writes it to `stages/<N>-<name>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
 
 ## Termination
 

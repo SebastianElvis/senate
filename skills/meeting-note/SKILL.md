@@ -62,9 +62,9 @@ Disposition shapes the notes. A stalled run's notes should center the obstacle a
 
 ### 3. Extract the structured signal
 
-For every stage, the synthesizer's last turn should have a fenced JSON block per the format's contract. Read it. The structured signal (vote tally, ruling, disposition) is the load-bearing payload of `notes.md`'s `## Structured outcome` section.
+For every stage, the synthesis turn ends in a fenced JSON block per the format's contract — all six formats produce one (parliament/court/red-team/peer-review use a decision contract; committee/brainstorm use a tally/selection contract). Read it. The structured signal (vote tally, ruling, disposition, top options) is the load-bearing payload of `notes.md`'s `## Structured outcome` section.
 
-For multi-stage runs, the top-level structured outcome summarizes pipeline status and key bindings; per-stage structured outcomes are still inside each stage's `stages/<n>/verdict.md`.
+For multi-stage runs, the top-level structured outcome summarizes pipeline status and key bindings; per-stage structured outcomes are still inside each stage's `stages/<n>-<name>/verdict.md`.
 
 ### 4. Compute the failure rollup
 

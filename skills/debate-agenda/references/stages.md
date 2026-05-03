@@ -148,7 +148,7 @@ stages:
 
 Verdict shape inside `## Final deliverable`: Final design, Review summaries, Review dissent if any branch rejected.
 
-Failure notes: if either review branch fails, mark stage 2 `partial` and let synthesis consume the surviving branch; if both branches reject, pause at the conditional checkpoint.
+Failure notes: with `merge_policy: wait_all`, any branch failure makes stage 2 `failed` and the moderator pauses for user intervention (per `branching.md` § Failure in branches). To tolerate a single branch failure and proceed on the surviving one, change `merge_policy` to `wait_quorum_1`. If both branches complete cleanly but reject the design, pause at the conditional checkpoint.
 
 ### bill-to-law
 

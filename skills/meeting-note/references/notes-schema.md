@@ -59,7 +59,7 @@ Lives at `<run-dir>/notes.md`. Written by `meeting-note`.
 
 If any transcript line has a non-null `error`, surface a failure rollup here:
 
-> **Failures:** T7 (gemini, rebuttal): rate_limit after 2 retries; continued. T11 (codex, vote): contract_violation on retry; recorded as abstain.
+> **Failures:** T7 (gemini, rebuttal): rate_limit after 1 retry; continued. T11 (codex, vote): contract_violation on retry; recorded as abstain.
 
 If `agents/moderator.md` recorded non-trivial governance decisions (re-plans, format swaps, tie-breaks), reference them by their cross-link IDs.
 
@@ -189,7 +189,7 @@ Not:
 
 ### Structured outcome
 
-A fenced `json` block. This is the load-bearing payload — the part downstream tools or eval harnesses parse. It must match the synthesis turn's fenced JSON in `transcript.jsonl`; do not silently rewrite it. For multi-stage runs, this is the pipeline-level rollup; per-stage structured outcomes stay inside each stage's `stages/<n>/verdict.md`.
+A fenced `json` block. This is the load-bearing payload — the part downstream tools or eval harnesses parse. It must match the synthesis turn's fenced JSON in `transcript.jsonl`; do not silently rewrite. For multi-stage runs, this is the pipeline-level rollup (a different shape from any single stage's structured outcome); per-stage structured outcomes stay inside each stage's `stages/<n>-<name>/verdict.md`.
 
 ### What didn't get resolved
 
@@ -230,7 +230,7 @@ For multi-stage notes, cite as `[stage-2 T4]` if a turn from a non-final stage m
 - **`completed`** — every stage's termination condition fired normally. The notes reflect what the synthesizer/judge/editor produced.
 - **`stalled`** — the run paused because of an obstacle (budget, repeated failures, all agents refused). The notes still get written, but the Decision section names the obstacle and proposes options.
 - **`aborted`** — the user explicitly stopped the run, or an escalation rule (e.g., `auth` failure) terminated it. `state.json.aborted_reason` will name the cause; surface it in the TL;DR.
-- **`partial`** — for branched pipelines, some branches succeeded and some failed. The notes document what each branch produced.
+- **`partial`** — for branched pipelines whose merge policy tolerated some-but-not-all branches succeeding (per `../../debate-agenda/references/branching.md` § Failure in branches). The notes document what each branch produced.
 
 A stalled, aborted, or partial disposition is **not** a failure to deliver — it's an honest record. Surface it prominently.
 

@@ -23,7 +23,7 @@ from pathlib import Path
 
 import yaml
 
-VALID_TERMINAL_STATES = {"completed", "stalled", "aborted"}
+VALID_TERMINAL_STATES = {"completed", "stalled", "aborted", "partial"}
 VALID_ERROR_CODES = {
     None, "auth", "rate_limit", "timeout", "contract_violation",
     "refusal", "unknown", "budget_exhausted",

@@ -5,7 +5,7 @@ How a single fixture run's *deterministic* checks become one entry in `scorecard
 ## Inputs
 
 - The fixture file (task, roster, rounds, expected verdict shape).
-- The completed run directory under the harness workspace at `<workspace>/.senate/runs/<run-id>/` with `transcript.jsonl`, `notes.md`, and (in multi-stage runs) `stages/<n>/verdict.md` files. The `.evals/` directory is for scorecards and reports, not run dirs. Failure facts are in `transcript.jsonl` (per-turn `error` codes); there is no separate `failures.md`.
+- The completed run directory under the harness workspace at `<workspace>/.senate/runs/<run-id>/` with `transcript.jsonl`, `notes.md`, and (in multi-stage runs) `stages/<n>-<name>/verdict.md` files. The `.evals/` directory is for scorecards and reports, not run dirs. Failure facts are in `transcript.jsonl` (per-turn `error` codes); there is no separate `failures.md`.
 
 ## Outputs per run
 

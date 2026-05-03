@@ -151,9 +151,9 @@ The moderator passes this contract to the per-turn subagent for the final vote t
 
 ### 6. Publication — **sequential**, single turn
 
-Role: `editor` (or `chair` if present). Produces the synthesis (which IS the deliverable):
+Role: `editor` (or `chair` if present). Produces the synthesis (which IS the deliverable). The reply is a markdown body **followed by** a trailing fenced `json` block summarizing the closure-vote tally:
 
-```markdown
+````markdown
 # {document title}
 
 {final draft body}
@@ -165,9 +165,13 @@ Role: `editor` (or `chair` if present). Produces the synthesis (which IS the del
 - Approved by: ...
 - Dissent: ...
 - Rounds: N
-```
 
-The editor's publication becomes the synthesis content. The moderator writes it to `stages/<N>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`.
+```json
+{"outcome": "approved" | "approved_with_dissent" | "blocked", "vote_tally": {"approve": N, "approve_with_dissent": N, "block": N}, "rounds": N, "dissent_points": ["..."]}
+```
+````
+
+The editor's publication becomes the synthesis content. The moderator writes it to `stages/<N>-<name>/verdict.md` (schema in `../../meeting-note/references/verdict-schema.md`); the scribe folds it into the run-wide `notes.md`. Downstream stages may bind `fenced-json.outcome` and `fenced-json.vote_tally`.
 
 ## Termination
 
