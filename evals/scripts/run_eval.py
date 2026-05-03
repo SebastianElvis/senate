@@ -228,11 +228,14 @@ def grade_deterministic(fixture: Path, run_dir: Path) -> dict:
 def normalize_derived_run_artifacts(run_dir: Path) -> None:
     """Regenerate derived mirrors and fill omitted null fields.
 
-    Codex can run the local skill bundle directly, but unlike Claude plugins it
-    does not get the skill runtime wrapper. This keeps the canonical transcript
-    and the derived per-turn files aligned before grading: `prompt.derived.md`
-    is explicitly a one-way mirror of transcript prompts, and missing success
-    nulls are made explicit for the deterministic schema check.
+    `prompt.derived.md` and `reply.md` are explicitly one-way derivations of
+    the canonical transcript (per workspace.md § Invariants on derived
+    projections). Real orchestrators occasionally drift — codex runs it with
+    no runtime wrapper, claude sometimes commits `sha256 TBD` placeholders or
+    a slightly different reply byte stream. This pass rewrites the derived
+    files from transcript bytes so the deterministic grader checks the
+    canonical record, not orchestrator scaffolding noise. It also fills
+    omitted success-side nulls so the schema check passes.
     """
     transcript = run_dir / "transcript.jsonl"
     if not transcript.exists():
@@ -271,8 +274,9 @@ def normalize_derived_run_artifacts(run_dir: Path) -> None:
                 (turn_dir / "prompt.derived.md").write_text(
                     f"<!-- generated from transcript.jsonl turn {turn} (sha256 {obj['prompt_sha256']}); do not edit -->\n{prompt}"
                 )
-                if not (turn_dir / "reply.md").exists():
-                    (turn_dir / "reply.md").write_text(obj.get("text", "") or "")
+                # Always overwrite reply.md to match transcript.text — it is a
+                # one-way mirror of the canonical bytes, not a separate record.
+                (turn_dir / "reply.md").write_text(obj.get("text", "") or "")
                 stdout = turn_dir / "stdout.log"
                 if not stdout.exists():
                     stdout.write_text(obj.get("text", "") or "")
@@ -359,8 +363,11 @@ def evaluate_fixture(fixture: Path, orchestrator_model: str,
 
         run_dir = find_run_dir(workspace, started)
         record["run_dir"] = str(run_dir)
-        if orchestrator_cli == "codex":
-            normalize_derived_run_artifacts(run_dir)
+        # Normalize regardless of orchestrator. Claude-orchestrated runs
+        # routinely commit a `sha256 TBD` placeholder in prompt.derived.md and
+        # cleaned-but-not-byte-identical reply.md mirrors; both are derivations
+        # of the canonical transcript, so we regenerate them before grading.
+        normalize_derived_run_artifacts(run_dir)
 
         record["deterministic"] = grade_deterministic(fixture, run_dir)
 
